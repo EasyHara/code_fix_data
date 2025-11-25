@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (레이아웃 최적화)</title>
+  <title>관리코드 스마트 수정기 (옵션 보기)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -100,6 +100,13 @@
     .btn-no-match:hover { background: #f1f5f9; color: #64748b; }
     .btn-no-match.active { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
 
+    /* 옵션 보기 버튼 */
+    .btn-view-opt {
+      font-size: 12px; padding: 6px 10px; background: #f1f5f9; border: 1px solid #cbd5e1;
+      border-radius: 6px; color: #475569; cursor: pointer; width: 100%;
+    }
+    .btn-view-opt:hover { background: #e2e8f0; color: #1e293b; }
+
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; min-width: 50px; text-align:center; }
     .badge-err { background: #fee2e2; color: var(--danger); }
     .badge-warn { background: #fef3c7; color: #d97706; }
@@ -107,12 +114,12 @@
     .badge-code { background: #ede9fe; color: var(--purple); }
     .badge-name { background: #dcfce7; color: var(--success); }
 
-    /* [수정] 컬럼 너비 최적화 */
-    .col-status { width: 90px; text-align: center; } /* 상태 배지 고정 */
-    .col-name   { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 상품명 줄임 */
-    .col-old    { width: 12%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 기존코드 줄임 */
-    .col-code   { width: 40%; } /* 입력창+버튼 영역 넓힘 */
-    .col-info   { width: 100px; color: #94a3b8; font-size: 12px; text-align: center; } /* 수량칸 고정 */
+    /* 컬럼 너비 */
+    .col-status { width: 90px; text-align: center; }
+    .col-name   { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .col-old    { width: 12%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .col-code   { width: 40%; }
+    .col-info   { width: 120px; text-align: center; }
 
     /* --- 모달 --- */
     .modal-overlay {
@@ -162,6 +169,12 @@
     .rule-del:hover { background: #fecaca; }
     .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 
+    /* 옵션 보기 모달 전용 스타일 */
+    .opt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .opt-table th { background: #f1f5f9; color: #475569; padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .opt-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .opt-table tr:last-child td { border-bottom: none; }
+
     /* 토스트 메시지 */
     #toast {
       visibility: hidden; min-width: 250px; margin-left: -125px;
@@ -180,7 +193,7 @@
   <div class="header">
     <div>
       <h1>🛠️ 관리코드 스마트 수정기</h1>
-      <p>하이브리드 자동완성 + 1번상품 제외 + 저장 예외(매칭X) 버튼</p>
+      <p>하이브리드 자동완성 + 1번상품 제외 + 매칭X + 옵션보기</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙 관리 / 동기화</button>
@@ -216,7 +229,7 @@
           <th class="col-name">상품명 (제품선택)</th>
           <th class="col-old">기존 코드</th>
           <th class="col-code">관리코드 (수정 결과)</th>
-          <th class="col-info">옵션 수</th>
+          <th class="col-info">옵션</th>
         </tr>
       </thead>
       <tbody id="tbody">
@@ -233,7 +246,6 @@
       <div class="modal-close" onclick="closeRuleManager()">&times;</div>
     </div>
     <div class="modal-body">
-      
       <div class="github-section">
         <div class="gh-title">☁️ GitHub 클라우드 동기화</div>
         <div class="gh-inputs">
@@ -247,7 +259,6 @@
           <button class="btn btn-success" onclick="loadFromGithub()">☁️ 다운로드 (복원)</button>
         </div>
       </div>
-
       <div class="tabs">
         <div class="tab active" id="tabCode" onclick="switchTab('code')">⚡ 코드 매칭 (<span id="cntCode">0</span>)</div>
         <div class="tab" id="tabName" onclick="switchTab('name')">🌿 이름 매칭 (<span id="cntName">0</span>)</div>
@@ -256,6 +267,18 @@
         <input type="text" class="search-input" id="ruleSearch" placeholder="검색어 입력..." oninput="renderRuleList()">
       </div>
       <div class="rule-list" id="ruleListArea"></div>
+    </div>
+  </div>
+</div>
+
+<div id="optModal" class="modal-overlay">
+  <div class="modal-content" style="width:600px; height:600px;">
+    <div class="modal-header">
+      <div class="modal-title" id="optModalTitle">상세 옵션</div>
+      <div class="modal-close" onclick="closeOptModal()">&times;</div>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div class="rule-list" id="optListArea" style="padding:0;"></div>
     </div>
   </div>
 </div>
@@ -270,6 +293,9 @@
   let groupData = []; 
   let targetColKey = "";
   let codeColKey = "";
+  let colorColKey = ""; // 색상 컬럼
+  let sizeColKey = "";  // 사이즈 컬럼
+  let stockColKey = ""; // 재고 컬럼
   let currentTab = 'code'; 
 
   // GitHub 설정 로드
@@ -295,8 +321,14 @@
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
       const keys = Object.keys(globalData[0]);
+      // 컬럼 자동 인식
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
+      
+      // 옵션 보기를 위한 추가 컬럼 인식
+      colorColKey = keys.find(k => /색상|color|opt1/i.test(k.replace(/\s/g,'')));
+      sizeColKey = keys.find(k => /사이즈|size|opt2/i.test(k.replace(/\s/g,'')));
+      stockColKey = keys.find(k => /재고|수량|qty|stock/i.test(k.replace(/\s/g,'')));
 
       if (!targetColKey) { alert("제품선택 컬럼을 찾을 수 없습니다."); return; }
       if (!codeColKey) { codeColKey = "관리코드"; }
@@ -335,28 +367,19 @@
       let finalCode = val.originalCode;
       let status = "ok";
       let matchType = "none";
-      let excludeSave = false; // 저장 제외 여부
+      let excludeSave = false; 
 
-      // [중요] 1번 상품(01, 1.) 감지 로직 -> 기본적으로 매칭 제외(수동 관리 권장)
       const isProductOne = /^[\s\[\(]*(?:no\.?)?0*1[\s\]\)\.\-]/i.test(val.rawName);
       
-      if (isProductOne) {
-          // 1번 상품은 기본적으로 저장 제외(매칭X) 상태로 시작 (원하면 사용자가 풀 수 있음)
-          excludeSave = true; 
-      }
+      if (isProductOne) { excludeSave = true; }
 
       if (val.originalCode && dbCode[val.originalCode]) {
         finalCode = dbCode[val.originalCode];
-        status = "auto";
-        matchType = "code";
-        codeMatch++;
+        status = "auto"; matchType = "code"; codeMatch++;
       } else if (!val.originalCode && dbName[key]) {
-        // 1번 상품은 이름 매칭을 스킵 (오염 방지)
         if (!isProductOne) {
             finalCode = dbName[key];
-            status = "auto";
-            matchType = "name";
-            nameMatch++;
+            status = "auto"; matchType = "name"; nameMatch++;
         }
       }
       
@@ -387,7 +410,6 @@
       else if (item.status === 'short') { badge = `<span class="badge badge-warn">확인필요</span>`; inputClass += " short"; }
       else { badge = `<span class="badge badge-ok">기존유지</span>`; }
 
-      // 매칭X 버튼 상태
       const btnClass = item.excludeSave ? "btn-no-match active" : "btn-no-match";
       const btnText = item.excludeSave ? "🔕 매칭X" : "🔔 매칭O";
 
@@ -402,7 +424,9 @@
               onchange="updateCode(${idx}, this.value)">
           </div>
         </td>
-        <td class="col-info">${item.rows.length}건</td>
+        <td class="col-info">
+          <button class="btn-view-opt" onclick="openOptModal(${idx})">🔎 ${item.rows.length}개 보기</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -416,30 +440,67 @@
     document.getElementById('dnBtnNew').disabled = false;
   }
 
-  // [신규] 매칭 제외 토글
+  // --- [신규] 옵션 보기 모달 ---
+  function openOptModal(idx) {
+    const item = groupData[idx];
+    document.getElementById('optModalTitle').textContent = `[${item.displayName}] 상세 옵션 (${item.rows.length}개)`;
+    const listArea = document.getElementById('optListArea');
+    
+    let html = `
+      <table class="opt-table">
+        <thead>
+          <tr>
+            <th>색상</th>
+            <th>사이즈</th>
+            <th>재고</th>
+            <th>원본 옵션명 (참고)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    item.rows.forEach(rowIdx => {
+        const row = globalData[rowIdx];
+        const color = colorColKey ? (row[colorColKey] || '-') : '-';
+        const size = sizeColKey ? (row[sizeColKey] || '-') : '-';
+        const stock = stockColKey ? (row[stockColKey] || '-') : '-';
+        const name = row[targetColKey] || '';
+
+        html += `
+          <tr>
+            <td style="font-weight:bold; color:#475569;">${color}</td>
+            <td>${size}</td>
+            <td>${stock}</td>
+            <td style="color:#94a3b8; font-size:12px;">${name}</td>
+          </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    listArea.innerHTML = html;
+    document.getElementById('optModal').style.display = 'flex';
+  }
+
+  function closeOptModal() {
+    document.getElementById('optModal').style.display = 'none';
+  }
+
+  // 매칭 제외 토글
   function toggleExclude(idx) {
     const item = groupData[idx];
     item.excludeSave = !item.excludeSave;
     
-    // 만약 제외(X)를 눌렀는데, 이미 DB에 저장된 데이터가 있다면 삭제할까요? 
-    // 여기서는 '더 이상 업데이트 안 함' + '가능하면 삭제' 로직으로 갑니다.
     if (item.excludeSave) {
         const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
         const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
-        
-        // DB에서 삭제
         if (item.originalCode) delete dbCode[item.originalCode];
         delete dbName[item.cleanName];
-        
         localStorage.setItem(DB_KEY_CODE, JSON.stringify(dbCode));
         localStorage.setItem(DB_KEY_NAME, JSON.stringify(dbName));
     } else {
-        // 다시 매칭O 상태가 되면 현재 값으로 저장 시도
         updateCode(idx, item.finalCode);
     }
 
-    // 부분 리렌더링 대신 전체 리렌더링 (통계 등 갱신 위해)
-    // 하지만 편의상 카운트만 그대로 두고 버튼만 바꿈
     const tr = document.getElementById('tbody').children[idx];
     const btn = tr.querySelector('.btn-no-match');
     btn.className = item.excludeSave ? "btn-no-match active" : "btn-no-match";
@@ -451,7 +512,6 @@
     const item = groupData[idx];
     item.finalCode = newCode;
     
-    // 매칭X 상태면 저장 안 함
     if (item.excludeSave) return;
 
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
@@ -532,7 +592,6 @@
     location.reload();
   }
 
-  // 토스트 메시지 함수
   function showToast(message) {
     const toast = document.getElementById("toast");
     toast.className = "show";
