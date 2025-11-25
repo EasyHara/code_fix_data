@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (규칙 예외 관리)</title>
+  <title>관리코드 스마트 수정기 (레이아웃 최적화)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -17,7 +17,7 @@
       margin: 0; padding: 20px; display: flex; justify-content: center;
     }
     .container {
-      width: 1450px; max-width: 98vw; background: var(--card); border-radius: 16px;
+      width: 1500px; max-width: 98vw; background: var(--card); border-radius: 16px;
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 92vh;
     }
     
@@ -93,14 +93,12 @@
 
     /* 매칭X 버튼 */
     .btn-no-match {
-      padding: 0 8px; height: 38px; font-size: 11px; font-weight: 700; 
+      padding: 0 10px; height: 38px; font-size: 11px; font-weight: 700; 
       border: 1px solid #cbd5e1; background: #fff; color: #94a3b8;
       border-radius: 6px; cursor: pointer; white-space: nowrap; transition: 0.2s;
     }
     .btn-no-match:hover { background: #f1f5f9; color: #64748b; }
-    .btn-no-match.active { 
-      background: #fee2e2; color: #ef4444; border-color: #fca5a5; 
-    }
+    .btn-no-match.active { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
 
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; min-width: 50px; text-align:center; }
     .badge-err { background: #fee2e2; color: var(--danger); }
@@ -109,11 +107,12 @@
     .badge-code { background: #ede9fe; color: var(--purple); }
     .badge-name { background: #dcfce7; color: var(--success); }
 
-    .col-status { width: 100px; text-align: center; }
-    .col-name { width: 35%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .col-old { width: 15%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .col-code { width: 30%; } /* 인풋영역 넓힘 */
-    .col-info { width: auto; color: #94a3b8; font-size: 12px; text-align: right; }
+    /* [수정] 컬럼 너비 최적화 */
+    .col-status { width: 90px; text-align: center; } /* 상태 배지 고정 */
+    .col-name   { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 상품명 줄임 */
+    .col-old    { width: 12%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 기존코드 줄임 */
+    .col-code   { width: 40%; } /* 입력창+버튼 영역 넓힘 */
+    .col-info   { width: 100px; color: #94a3b8; font-size: 12px; text-align: center; } /* 수량칸 고정 */
 
     /* --- 모달 --- */
     .modal-overlay {
