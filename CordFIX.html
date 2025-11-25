@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (토스트 알림)</title>
+  <title>관리코드 스마트 수정기 (파일명 유지)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -48,6 +48,7 @@
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: #2563eb; }
     
+    /* 저장 버튼 그룹 */
     .btn-overwrite { background: #0f172a; color: #fff; margin-left: auto; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2); }
     .btn-overwrite:hover:not(:disabled) { background: #334155; transform: translateY(-1px); }
     
@@ -433,7 +434,7 @@
     }
   }
 
-  // 2. 새 파일로 저장
+  // 2. 새 파일로 저장 (파일명 유지)
   function downloadNew() {
     if (globalData.length === 0) return;
     const wb = createWorkbook();
@@ -441,7 +442,8 @@
     const blob = new Blob([wbOut], {type: "application/octet-stream"});
     
     const originalFile = document.getElementById('fileInput').files[0];
-    const fileName = originalFile ? originalFile.name.replace(/\.[^/.]+$/, "") + "_수정.xlsx" : "result.xlsx";
+    // [수정] 원본 파일명과 확장자 그대로 사용
+    const fileName = originalFile ? originalFile.name : "result.xlsx";
     
     saveAs(blob, fileName);
     showToast("✅ 저장되었습니다!");
