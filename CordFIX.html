@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (클라우드 동기화)</title>
+  <title>관리코드 스마트 수정기 (토스트 알림)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -47,13 +47,20 @@
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: #2563eb; }
-    .btn-success { background: var(--success); color: #fff; margin-left: auto; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
-    .btn-success:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
+    
+    .btn-overwrite { background: #0f172a; color: #fff; margin-left: auto; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2); }
+    .btn-overwrite:hover:not(:disabled) { background: #334155; transform: translateY(-1px); }
+    
+    .btn-newfile { background: var(--success); color: #fff; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
+    .btn-newfile:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
+
     .btn-danger { background: #fee2e2; color: var(--danger); }
     .btn-danger:hover { background: #fecaca; }
+    
     .btn-github { background: var(--github); color: #fff; }
     .btn-github:hover { background: #000; }
-    .btn:disabled { background: #e2e8f0; cursor: not-allowed; color: #94a3b8; box-shadow: none; }
+
+    .btn:disabled { background: #e2e8f0; cursor: not-allowed; color: #94a3b8; box-shadow: none; transform: none !important; }
 
     .stats-bar {
       padding: 12px 30px; background: #fff; border-bottom: 1px solid var(--border);
@@ -100,7 +107,7 @@
       background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center;
     }
     .modal-content {
-      background: #fff; width: 900px; max-width: 95vw; height: 85vh;
+      background: #fff; width: 850px; max-width: 95vw; height: 85vh;
       border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
       display: flex; flex-direction: column; overflow: hidden;
     }
@@ -113,7 +120,16 @@
     .modal-close:hover { color: #ef4444; }
 
     .modal-body { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
-    .tabs { display: flex; gap: 2px; padding: 0 24px; margin-top: 20px; border-bottom: 1px solid var(--border); }
+    
+    /* GitHub 섹션 */
+    .github-section {
+      margin: 20px 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;
+    }
+    .gh-title { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .gh-inputs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .gh-input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
+
+    .tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--border); }
     .tab {
       padding: 10px 20px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer;
       border-top-left-radius: 8px; border-top-right-radius: 8px; background: #e2e8f0;
@@ -133,13 +149,16 @@
     .rule-del:hover { background: #fecaca; }
     .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 
-    /* GitHub 섹션 */
-    .github-section {
-      margin: 20px 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;
+    /* 토스트 메시지 */
+    #toast {
+      visibility: hidden; min-width: 250px; margin-left: -125px;
+      background-color: #333; color: #fff; text-align: center;
+      border-radius: 50px; padding: 16px; position: fixed; z-index: 3000;
+      left: 50%; bottom: 30px; font-size: 15px; opacity: 0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: opacity 0.5s, bottom 0.5s;
     }
-    .gh-title { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .gh-inputs { display: flex; gap: 8px; margin-bottom: 10px; }
-    .gh-input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
+    #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
   </style>
 </head>
 <body>
@@ -165,7 +184,8 @@
       </label>
     </div>
     <div style="flex:1;"></div>
-    <button class="btn btn-success" id="dnBtn" onclick="downloadExcel()" disabled>💾 덮어쓰기 저장 (Chrome)</button>
+    <button class="btn btn-overwrite" id="dnBtnOverwrite" onclick="downloadOverwrite()" disabled title="엑셀파일을 끄고 눌러야 합니다">💾 덮어쓰기 저장</button>
+    <button class="btn btn-newfile" id="dnBtnNew" onclick="downloadNew()" disabled>📥 새 파일로 저장</button>
   </div>
 
   <div class="stats-bar">
@@ -227,8 +247,9 @@
   </div>
 </div>
 
+<div id="toast"></div>
+
 <script>
-  // 저장소 키 설정
   const DB_KEY_CODE = "easyHara_db_by_code_v1"; 
   const DB_KEY_NAME = "easyHara_db_by_name_v1"; 
 
@@ -238,7 +259,7 @@
   let codeColKey = "";
   let currentTab = 'code'; 
 
-  // 초기화 및 설정 로드
+  // GitHub 설정 로드
   document.addEventListener('DOMContentLoaded', () => {
     const ghConfig = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
     if(ghConfig.token) document.getElementById('ghToken').value = ghConfig.token;
@@ -357,7 +378,8 @@
     document.getElementById('codeMatchCount').innerText = cMatch;
     document.getElementById('nameMatchCount').innerText = nMatch;
     document.getElementById('errCount').innerText = err;
-    document.getElementById('dnBtn').disabled = false;
+    document.getElementById('dnBtnOverwrite').disabled = false;
+    document.getElementById('dnBtnNew').disabled = false;
   }
 
   function updateCode(idx, newCode) {
@@ -381,25 +403,14 @@
     localStorage.setItem(DB_KEY_NAME, JSON.stringify(dbName));
   }
 
-  // 덮어쓰기 저장 (File System Access API)
-  async function downloadExcel() {
+  // 1. 덮어쓰기 저장 (Chrome/Edge)
+  async function downloadOverwrite() {
     if (globalData.length === 0) return;
-
-    const finalData = JSON.parse(JSON.stringify(globalData));
-    groupData.forEach(group => {
-      group.rows.forEach(rowIdx => {
-        finalData[rowIdx][codeColKey] = group.finalCode;
-      });
-    });
-
-    const ws = XLSX.utils.json_to_sheet(finalData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-
-    const originalFile = document.getElementById('fileInput').files[0];
-    const fileName = originalFile ? originalFile.name : "result.xlsx";
+    const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbOut], {type: "application/octet-stream"});
+    const originalFile = document.getElementById('fileInput').files[0];
+    const fileName = originalFile ? originalFile.name : "result.xlsx";
 
     if (window.showSaveFilePicker) {
         try {
@@ -410,11 +421,43 @@
             const writable = await handle.createWritable();
             await writable.write(blob);
             await writable.close();
-            alert("저장되었습니다!");
-            return;
-        } catch (err) { if (err.name !== 'AbortError') console.error(err); return; }
+            showToast("✅ 저장되었습니다!");
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                alert("⚠️ 오류: 파일이 열려있다면 닫고 다시 시도하세요.\n" + err);
+            }
+        }
+    } else {
+        alert("이 브라우저는 덮어쓰기를 지원하지 않습니다.\n[새 파일로 저장]을 이용해주세요.");
+        saveAs(blob, fileName);
     }
+  }
+
+  // 2. 새 파일로 저장
+  function downloadNew() {
+    if (globalData.length === 0) return;
+    const wb = createWorkbook();
+    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbOut], {type: "application/octet-stream"});
+    
+    const originalFile = document.getElementById('fileInput').files[0];
+    const fileName = originalFile ? originalFile.name.replace(/\.[^/.]+$/, "") + "_수정.xlsx" : "result.xlsx";
+    
     saveAs(blob, fileName);
+    showToast("✅ 저장되었습니다!");
+  }
+
+  function createWorkbook() {
+    const finalData = JSON.parse(JSON.stringify(globalData));
+    groupData.forEach(group => {
+      group.rows.forEach(rowIdx => {
+        finalData[rowIdx][codeColKey] = group.finalCode;
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(finalData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    return wb;
   }
 
   function resetAll() {
@@ -422,7 +465,15 @@
     location.reload();
   }
 
-  // 모달 및 규칙 관리
+  // 토스트 메시지 함수
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.className = "show";
+    toast.innerText = message;
+    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+  }
+
+  // --- 규칙 관리자 ---
   function openRuleManager() { document.getElementById('ruleModal').style.display = 'flex'; renderRuleList(); }
   function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length > 0) processGroups(); }
   function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab === 'code' ? 'tab active' : 'tab'; document.getElementById('tabName').className = tab === 'name' ? 'tab active' : 'tab'; renderRuleList(); }
@@ -454,7 +505,7 @@
       `;
       listArea.appendChild(div);
     });
-    if (!hasItem) listArea.innerHTML = `<div class="empty-state">규칙이 없습니다.</div>`;
+    if (!hasItem) listArea.innerHTML = `<div class="empty-state">데이터가 없습니다.</div>`;
   }
 
   function saveRule(key, newVal) {
@@ -472,23 +523,20 @@
     renderRuleList();
   }
 
-  // ==========================================
-  // GitHub 연동 로직
-  // ==========================================
+  // --- GitHub 연동 ---
   function saveGithubConfig() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim();
     if(!token || !repo) return alert('토큰과 저장소 정보를 입력하세요.');
     localStorage.setItem('gh_config_fixer', JSON.stringify({ token, repo, path }));
-    alert("GitHub 설정이 저장되었습니다.");
+    showToast("설정이 저장되었습니다.");
   }
 
   async function uploadToGithub() {
     const conf = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
     if(!conf.token) return alert('토큰 설정이 필요합니다.');
     
-    // 두 DB를 합쳐서 저장
     const combinedData = {
       codeDB: JSON.parse(localStorage.getItem(DB_KEY_CODE) || '{}'),
       nameDB: JSON.parse(localStorage.getItem(DB_KEY_NAME) || '{}')
@@ -499,7 +547,6 @@
     const url = `https://api.github.com/repos/${conf.repo}/contents/${conf.path}`;
 
     try {
-      // 기존 파일 SHA 가져오기 (덮어쓰기 위해 필수)
       let sha = null;
       const getRes = await fetch(url, { headers: { 'Authorization': `token ${conf.token}` } });
       if (getRes.ok) { const json = await getRes.json(); sha = json.sha; }
@@ -510,7 +557,7 @@
         body: JSON.stringify({ message: `Backup ${new Date().toLocaleString()}`, content: contentBase64, sha: sha })
       });
 
-      if (putRes.ok) alert("✅ 클라우드 백업 완료!");
+      if (putRes.ok) showToast("✅ 클라우드 백업 완료!");
       else alert("업로드 실패: " + (await putRes.json()).message);
     } catch (e) { alert("오류 발생: " + e); }
   }
@@ -528,12 +575,11 @@
       const decoded = decodeURIComponent(escape(atob(data.content)));
       const parsed = JSON.parse(decoded);
 
-      // 데이터 분리 복원
       if (parsed.codeDB) localStorage.setItem(DB_KEY_CODE, JSON.stringify(parsed.codeDB));
       if (parsed.nameDB) localStorage.setItem(DB_KEY_NAME, JSON.stringify(parsed.nameDB));
       
-      alert("✅ 클라우드 데이터 복원 완료!");
-      renderRuleList(); // 리스트 갱신
+      showToast("✅ 클라우드 데이터 복원 완료!");
+      renderRuleList();
     } catch (e) { alert("불러오기 실패: " + e); }
   }
 </script>
