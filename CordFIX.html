@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (텍스트 선택 가능)</title>
+  <title>옵션 & 코드 마스터 (코드기준 정렬)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -13,6 +13,7 @@
       --text: #1e293b; --text-sub: #64748b;
       --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --purple: #8b5cf6;
       --linked-bg: #eff6ff; --linked-border: #3b82f6;
+      --group-even-bg: #f8fafc; --group-border: #cbd5e1;
     }
     body {
       font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text);
@@ -32,7 +33,7 @@
 
     /* 컨트롤 패널 */
     .controls {
-      padding: 14px 24px; background: #f1f5f9; border-bottom: 1px solid var(--border);
+      padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid var(--border);
       display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
     }
     .input-group { display: flex; flex-direction: column; gap: 4px; }
@@ -88,16 +89,20 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     thead th {
       position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 10px 12px;
-      text-align: left; color: var(--text-sub); font-weight: 600; border-bottom: 1px solid var(--border);
+      text-align: left; color: var(--text-sub); font-weight: 600; border-bottom: 2px solid #e2e8f0;
     }
     tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: var(--text); }
     
-    /* 행 스타일 */
+    /* 행 스타일 (그룹화) */
     tr { transition: background 0.1s; }
-    tr:hover { background: #f8fafc; }
-    tr.linked { background-color: var(--linked-bg); }
+    tr:hover { background: #e2e8f0 !important; }
+    
+    tr.group-start td { border-top: 2px solid var(--group-border); }
+    tr.group-even { background-color: var(--group-even-bg); }
+    tr.group-odd { background-color: #fff; }
+    tr.linked { background-color: var(--linked-bg) !important; }
     tr.linked td:first-child { box-shadow: inset 3px 0 0 var(--linked-border); }
-    tr.dragging { opacity: 0.5; background: #e0e7ff; }
+    tr.dragging { opacity: 0.5; background: #e0e7ff !important; }
     tr.drag-over { border-top: 2px solid var(--primary); }
 
     /* 인풋 스타일 */
@@ -194,7 +199,7 @@
   <div class="header">
     <div>
       <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
-      <p>텍스트선택 가능 + 입력 최적화 + 색상분리 + 클라우드</p>
+      <p>관리코드 동일 시 자동 그룹핑 + 입력최적화 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -348,7 +353,6 @@
 
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
-      // 컬럼 자동 인식
       const keys = Object.keys(globalData[0]);
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
@@ -432,6 +436,17 @@
       });
     });
 
+    // [핵심] 자동 묶기 로직 추가
+    // 배열을 순회하면서, 바로 앞 상품과 "관리코드"가 같으면 linkToPrev = true
+    for (let i = 1; i < groupData.length; i++) {
+        const prev = groupData[i-1];
+        const curr = groupData[i];
+        // 기존 코드가 존재하고 서로 같으면 묶음
+        if (curr.originalCode && prev.originalCode && curr.originalCode === prev.originalCode) {
+            curr.linkToPrev = true;
+        }
+    }
+
     toggleSeqMode(false); 
     
     document.getElementById('codeMatchCount').innerText = codeMatch;
@@ -441,7 +456,7 @@
     document.getElementById('btnSave2').disabled = false;
   }
 
-  // [신규] 공통: 행 파싱 함수 (합쳐진 색상/사이즈 분리)
+  // 공통: 행 파싱 함수
   function parseRowInfo(rowIdx) {
       const row = globalData[rowIdx];
       let color = colorColKey ? String(row[colorColKey] || "").trim() : "";
@@ -459,7 +474,7 @@
       return { color, size, stock, name };
   }
 
-  // [신규] 색상별 분리 (Split)
+  // 색상별 분리 (Split)
   function splitByColor(idx) {
       const targetGroup = groupData[idx];
       const rows = targetGroup.rows;
@@ -540,12 +555,13 @@
     document.getElementById('totalCount').innerText = groupData.length;
 
     const fragment = document.createDocumentFragment();
+    let lastSeq = null;
+    let groupIndex = 0;
 
     visibleItems.forEach((item) => {
       const i = item.orgIdx;
       const tr = document.createElement('tr');
       
-      // [수정] 순번 체크가 꺼져 있으면 드래그 기능 제거 (텍스트 선택 가능)
       if (isSeqMode) {
           tr.setAttribute('draggable', true);
           addDragEvents(tr);
@@ -553,6 +569,17 @@
       
       tr.dataset.index = i;
       if(item.linkToPrev) tr.classList.add('linked');
+
+      // 그룹 시각화
+      const isNewGroup = item.seq !== lastSeq;
+      if (isNewGroup) {
+          lastSeq = item.seq;
+          groupIndex++;
+          tr.classList.add('group-start');
+      }
+      if (!item.linkToPrev) {
+          tr.classList.add(groupIndex % 2 === 0 ? 'group-even' : 'group-odd');
+      }
 
       let badge = "", inputClass = "code-input";
       if (item.matchType === 'code') { badge = `<span class="badge badge-code">⚡ 코드</span>`; inputClass += " auto-code"; }
@@ -566,27 +593,31 @@
       
       let seqText = "";
       let linkIcon = "";
-      
+      let seqDisplay = "";
+
       if (isSeqMode) {
           seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
           linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
+          if (item.linkToPrev) {
+             seqDisplay = `<span style="color:#cbd5e1;">${linkIcon}${seqText}</span>`;
+          } else {
+             seqDisplay = `${linkIcon}${seqText}`;
+          }
       } else {
-          seqText = "-"; 
+          seqDisplay = "-"; 
       }
 
-      // 색상 분리 버튼
       let splitBtn = "";
       if (item.rows.length > 1 && !item.displayName.includes('[')) {
          splitBtn = `<button class="btn-split" onclick="splitByColor(${i})">🎨 분리</button>`;
       }
 
-      // 드래그 핸들 (순번 모드 꺼지면 숨김)
       const dragHandle = isSeqMode ? '⋮⋮' : '';
 
       tr.innerHTML = `
         <td class="col-chk"><input type="checkbox" class="row-chk" data-idx="${i}" ${item.isChecked ? 'checked' : ''}></td>
         <td class="col-drag" style="cursor:${isSeqMode?'grab':'default'}">${dragHandle}</td>
-        <td class="col-seq">${linkIcon}${seqText}</td>
+        <td class="col-seq">${seqDisplay}</td>
         <td class="col-status">${badge}</td>
         <td class="col-name">
           <input type="text" class="common-input name-input" value="${item.displayName}" 
@@ -614,20 +645,19 @@
 
   function updateName(idx, val) { groupData[idx].displayName = val; }
 
-  // [핵심] 입력 시에는 오직 메모리상의 데이터만 변경 (DB 저장 X)
+  // 입력 시에는 변수만 업데이트 (저장 X)
   function updateCode(idx, val) {
     groupData[idx].finalCode = val; 
   }
 
-  // [신규] 일괄 저장 함수 (파일 저장 버튼 누를 때 실행)
+  // 일괄 저장 함수 (저장 버튼 누를 때 호출)
   function saveAllRules() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
 
     groupData.forEach(item => {
         if (item.excludeSave) return; 
-
-        const cleanVal = item.finalCode.trim(); // 저장할 땐 공백 제거
+        const cleanVal = item.finalCode.trim(); 
 
         if (cleanVal) {
             if (item.originalCode && item.originalCode !== cleanVal) {
@@ -732,7 +762,6 @@
     });
   }
 
-  // 저장 로직 (이때 DB 저장도 수행)
   function createWorkbook() {
     const finalData = JSON.parse(JSON.stringify(globalData));
     const formatStr = document.getElementById('formatStr').value || "00) ";
@@ -758,7 +787,7 @@
   async function downloadOverwrite() {
     if (!globalData.length) return;
     
-    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
+    saveAllRules(); // 규칙 저장
 
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -784,7 +813,7 @@
   function downloadNew() {
     if (!globalData.length) return;
 
-    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
+    saveAllRules(); // 규칙 저장
 
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -795,7 +824,6 @@
     if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
   }
 
-  // 옵션 보기 모달
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
@@ -822,7 +850,6 @@
     setTimeout(() => t.className = t.className.replace("show", ""), 3000);
   }
 
-  // 규칙 관리자 관련
   function openRuleManager() { document.getElementById('ruleModal').style.display = 'flex'; renderRuleList(); }
   function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length) processGroups(); }
   function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab==='code'?'tab active':'tab'; document.getElementById('tabName').className = tab==='name'?'tab active':'tab'; renderRuleList(); }
@@ -856,7 +883,6 @@
     delete db[key]; localStorage.setItem(k, JSON.stringify(db)); renderRuleList();
   }
 
-  // GitHub 연동
   function saveGithubConfig() {
     const t = document.getElementById('ghToken').value; const r = document.getElementById('ghRepo').value; const p = document.getElementById('ghPath').value;
     if(!t || !r) return alert("정보를 입력하세요.");
