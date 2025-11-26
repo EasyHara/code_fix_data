@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (버그수정)</title>
+  <title>옵션 마스터 (최종 완결)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -23,14 +23,12 @@
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 95vh;
     }
     
-    /* 헤더 */
     .header {
       padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff;
     }
     .header h1 { margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }
     .header p { margin: 4px 0 0; font-size: 13px; color: var(--text-sub); }
 
-    /* 컨트롤 패널 */
     .controls {
       padding: 14px 24px; background: #f1f5f9; border-bottom: 1px solid var(--border);
       display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
@@ -50,7 +48,6 @@
     }
     input[type="text"]:focus { border-color: var(--primary); }
 
-    /* 버튼 */
     .btn {
       padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
     }
@@ -66,7 +63,6 @@
     .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none; }
 
-    /* 툴바 */
     .toolbar {
       padding: 10px 24px; background: #fff; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center;
     }
@@ -76,14 +72,12 @@
     }
     .seq-check { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #0369a1; cursor: pointer; margin: 0; }
     
-    /* 통계바 */
     .stats-bar {
       padding: 8px 24px; background: #f8fafc; border-bottom: 1px solid var(--border);
       font-size: 12px; display: flex; gap: 16px; color: var(--text-sub);
     }
     .stat-item b { font-weight: 800; margin-left: 3px; }
 
-    /* 테이블 */
     .table-area { flex: 1; overflow-y: auto; position: relative; background: #fff; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     thead th {
@@ -92,7 +86,6 @@
     }
     tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: var(--text); }
     
-    /* 행 스타일 */
     tr { transition: background 0.1s; }
     tr:hover { background: #f8fafc; }
     tr.linked { background-color: var(--linked-bg); }
@@ -100,7 +93,6 @@
     tr.dragging { opacity: 0.5; background: #e0e7ff; }
     tr.drag-over { border-top: 2px solid var(--primary); }
 
-    /* 인풋 스타일 */
     .common-input {
       width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 4px;
       font-family: 'Pretendard', sans-serif; font-size: 13px; background: transparent; transition: 0.2s; box-sizing: border-box;
@@ -114,7 +106,6 @@
     .code-input.auto-code { border-color: var(--purple); background: #f5f3ff; color: #5b21b6; font-weight: 600; }
     .code-input.auto-name { border-color: var(--success); background: #f0fdf4; color: #065f46; font-weight: 600; }
 
-    /* 요소들 */
     .code-input-group { display: flex; gap: 4px; width: 100%; align-items: center; }
     .btn-no-match {
       padding: 0 6px; height: 34px; font-size: 11px; font-weight: 700; 
@@ -133,11 +124,17 @@
 
     .btn-view-opt {
       font-size: 11px; padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1;
-      border-radius: 4px; color: #64748b; cursor: pointer; width: 100%;
+      border-radius: 4px; color: #64748b; cursor: pointer; width: 100%; margin-right: 4px;
     }
     .btn-view-opt:hover { background: #e2e8f0; color: #1e293b; }
+    
+    /* 색상분리 버튼 */
+    .btn-split {
+        font-size: 11px; padding: 4px 8px; background: #f0fdf4; border: 1px solid #86efac;
+        border-radius: 4px; color: #166534; cursor: pointer; white-space: nowrap;
+    }
+    .btn-split:hover { background: #dcfce7; }
 
-    /* 컬럼 너비 */
     .col-chk    { width: 30px; text-align: center; }
     .col-drag   { width: 30px; text-align: center; cursor: grab; color: #cbd5e1; }
     .col-seq    { width: 60px; text-align: center; font-weight: 700; color: #64748b; }
@@ -145,13 +142,12 @@
     .col-name   { width: 25%; }
     .col-old    { width: 10%; color: #94a3b8; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .col-code   { width: 30%; }
-    .col-info   { width: 90px; text-align: center; }
+    .col-info   { width: 120px; text-align: center; white-space: nowrap; }
 
     input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
     .link-icon { color: #cbd5e1; font-size: 14px; margin-right: 4px; width: 14px; display: inline-block; }
     .link-icon.active { color: var(--primary); font-weight: bold; }
 
-    /* 모달 등 나머지 스타일 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
     .modal-content { background: #fff; width: 800px; max-width: 95vw; height: 80vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
     .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -186,8 +182,8 @@
 <div class="container">
   <div class="header">
     <div>
-      <h1>🔢 옵션 & 코드 마스터 (All-in-One)</h1>
-      <p>순번 정리 + 관리코드 자동완성 + 1번상품 보호 + 클라우드 동기화</p>
+      <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
+      <p>입력 최적화(끊김없음) + 색상분리(Split) + 순번제어 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -308,11 +304,9 @@
 <div id="toast"></div>
 
 <script>
-  // 저장소 키
   const DB_KEY_CODE = "easyHara_db_by_code_v1"; 
   const DB_KEY_NAME = "easyHara_db_by_name_v1"; 
 
-  // 전역 변수
   let globalData = []; 
   let groupData = [];  
   let targetColKey = "", codeColKey = "";
@@ -322,7 +316,6 @@
   let dragSrcIndex = null;
   let isSeqMode = false; 
 
-  // 초기화
   document.addEventListener('DOMContentLoaded', () => {
     const ghConfig = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
     if(ghConfig.token) document.getElementById('ghToken').value = ghConfig.token;
@@ -330,7 +323,6 @@
     if(ghConfig.path) document.getElementById('ghPath').value = ghConfig.path;
   });
 
-  // 1. 파일 로드
   function handleFile(input) {
     const file = input.files[0];
     if (!file) return;
@@ -345,7 +337,6 @@
 
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
-      // 컬럼 자동 인식
       const keys = Object.keys(globalData[0]);
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
@@ -361,7 +352,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // 2. 데이터 그룹화 및 로직 적용
   function processGroups() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
@@ -380,6 +370,7 @@
 
       if (!cleanName) return;
 
+      // [그룹키] 상품명|||코드 (코드가 다르면 분리됨)
       const uniqueGroupKey = cleanName + "|||" + codeVal;
 
       if (!map.has(uniqueGroupKey)) {
@@ -439,7 +430,47 @@
     document.getElementById('btnSave2').disabled = false;
   }
 
-  // 순번 모드 토글
+  // [신규] 색상별 분리 기능
+  function splitByColor(idx) {
+      if (!colorColKey) return alert("색상 컬럼을 찾을 수 없습니다.");
+      
+      const targetGroup = groupData[idx];
+      const rows = targetGroup.rows;
+      
+      // 색상별로 행 분류
+      const colorMap = {};
+      rows.forEach(rowIdx => {
+          const color = String(globalData[rowIdx][colorColKey] || "기타").trim();
+          if(!colorMap[color]) colorMap[color] = [];
+          colorMap[color].push(rowIdx);
+      });
+
+      const colors = Object.keys(colorMap);
+      if (colors.length <= 1) return alert("분리할 색상이 없거나 1개뿐입니다.");
+
+      // 기존 그룹 제거 후 새 그룹들 삽입
+      const newGroups = colors.map(color => {
+          // 새 그룹 객체 생성 (기존 정보 복사)
+          return {
+              ...targetGroup,
+              cleanName: targetGroup.cleanName,
+              rawName: targetGroup.rawName,
+              displayName: `${targetGroup.displayName} [${color}]`, // 이름에 색상 추가
+              rows: colorMap[color],
+              // 코드는 새로 입력받아야 하므로 초기화하거나 유지 (여기선 유지)
+              // linkToPrev 등 상태 초기화
+              linkToPrev: false,
+              isChecked: false
+          };
+      });
+
+      // 배열 교체 (splice)
+      groupData.splice(idx, 1, ...newGroups);
+      
+      // 재계산 및 렌더링
+      recalcNumbers();
+  }
+
   function toggleSeqMode(forceVal) {
     const chk = document.getElementById('useSeq');
     if (forceVal !== undefined) chk.checked = forceVal;
@@ -449,15 +480,24 @@
     
     if (isSeqMode) {
         formatInput.style.display = 'block';
-        groupData.forEach(item => { item.displayName = item.cleanName; });
+        groupData.forEach(item => { 
+            // 색상분리된 경우 displayName 유지, 아니면 cleanName 사용
+            if (!item.displayName.includes('[')) item.displayName = item.cleanName; 
+        });
     } else {
         formatInput.style.display = 'none';
-        groupData.forEach(item => { item.displayName = item.rawName; });
+        groupData.forEach(item => { 
+            // 분리된 경우 원본+색상, 아니면 원본
+            if (item.displayName.includes('[')) {
+                 // 이미 분리된 이름은 그대로 둠
+            } else {
+                 item.displayName = item.rawName;
+            }
+        });
     }
     recalcNumbers();
   }
 
-  // 순번 재계산
   function recalcNumbers() {
     let currentSeq = 0;
     groupData.forEach((item, i) => {
@@ -471,7 +511,6 @@
     renderTable();
   }
 
-  // 테이블 렌더링
   function renderTable() {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = "";
@@ -507,14 +546,13 @@
       const btnClass = item.excludeSave ? "btn-no-match active" : "btn-no-match";
       const btnText = item.excludeSave ? "🔕 매칭X" : "🔔 매칭O";
       
-      let seqText = "";
-      let linkIcon = "";
-      
-      if (isSeqMode) {
-          seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
-          linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
-      } else {
-          seqText = "-"; // 모드 꺼지면 순번 안보임
+      let seqText = isSeqMode ? formatStr.replace('00', String(item.seq).padStart(2, '0')) : "-";
+      let linkIcon = (i > 0 && item.linkToPrev && isSeqMode) ? `<span class="link-icon active">↳</span>` : ``;
+
+      // 색상 분리 버튼 (옵션이 2개 이상일 때만 노출)
+      let splitBtn = "";
+      if (item.rows.length > 1 && !item.displayName.includes('[')) {
+         splitBtn = `<button class="btn-split" onclick="splitByColor(${i})">🎨 색상분리</button>`;
       }
 
       tr.innerHTML = `
@@ -529,13 +567,14 @@
         <td class="col-old" title="${item.originalCode}">${item.originalCode || '-'}</td>
         <td class="col-code">
           <div class="code-input-group">
-            <button class="${btnClass}" onclick="toggleExclude(${i})" title="자동완성 규칙 저장 여부">${btnText}</button>
+            <button class="${btnClass}" onclick="toggleExclude(${i})" title="규칙 저장 여부">${btnText}</button>
             <input type="text" class="common-input ${inputClass}" value="${item.finalCode}" 
               oninput="updateCode(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'code')">
           </div>
         </td>
-        <td class="col-info">
-          <button class="btn-view-opt" onclick="openOptModal(${i})">🔎 ${item.rows.length}개 보기</button>
+        <td class="col-info" style="display:flex; gap:4px; justify-content:center;">
+          <button class="btn-view-opt" onclick="openOptModal(${i})">🔎 ${item.rows.length}</button>
+          ${splitBtn}
         </td>
       `;
       
@@ -549,37 +588,38 @@
 
   // --- 로직 함수들 ---
 
-  function updateName(idx, val) { groupData[idx].displayName = val; }
-
-  // [수정] 입력 시에는 그대로 유지, 저장시에만 trim
-  function updateCode(idx, val) {
-    groupData[idx].finalCode = val; 
-    saveToDB(idx, val.trim());
+  function updateName(idx, val) { 
+      groupData[idx].displayName = val; 
   }
 
-  function saveToDB(idx, cleanVal) {
-    const item = groupData[idx];
+  // [수정] 입력 시 저장 안 함 (버그 해결)
+  function updateCode(idx, val) {
+    groupData[idx].finalCode = val; 
+    // saveToDB 호출 제거 -> 저장 버튼 누를 때 일괄 저장
+  }
+
+  // 실제 DB 저장 (파일 저장 시 호출)
+  function saveRuleToDB(item) {
     if (item.excludeSave) return;
+    const cleanVal = item.finalCode.trim();
+    if (!cleanVal) return; // 빈 값은 저장 안함
 
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
     
-    if (cleanVal) {
-      if (item.originalCode && item.originalCode !== cleanVal) dbCode[item.originalCode] = cleanVal;
-      dbName[item.cleanName] = cleanVal;
-    } else {
-      if (item.originalCode) delete dbCode[item.originalCode];
-      delete dbName[item.cleanName];
+    if (item.originalCode && item.originalCode !== cleanVal) {
+        dbCode[item.originalCode] = cleanVal;
     }
+    // 색상 분리된 이름 등은 이름 규칙에 저장 (대괄호 포함)
+    dbName[item.cleanName] = cleanVal; 
+    
     localStorage.setItem(DB_KEY_CODE, JSON.stringify(dbCode));
     localStorage.setItem(DB_KEY_NAME, JSON.stringify(dbName));
   }
 
   function toggleExclude(idx) {
     groupData[idx].excludeSave = !groupData[idx].excludeSave;
-    saveToDB(idx, groupData[idx].finalCode.trim());
-    
-    // 화면 전체 갱신 대신 버튼만 바꿈 (입력 끊김 방지)
+    // 화면 갱신 없이 버튼만 토글
     const tr = document.querySelector(`input[oninput*="updateCode(${idx}"]`).closest('tr');
     const btn = tr.querySelector('.btn-no-match');
     btn.className = groupData[idx].excludeSave ? "btn-no-match active" : "btn-no-match";
@@ -666,12 +706,16 @@
     });
   }
 
-  // 저장 로직
+  // 저장 로직 (이때 DB 저장도 수행)
   function createWorkbook() {
     const finalData = JSON.parse(JSON.stringify(globalData));
     const formatStr = document.getElementById('formatStr').value || "00) ";
     
     groupData.forEach(item => {
+      // 1. 규칙 DB 저장 (일괄)
+      saveRuleToDB(item);
+
+      // 2. 엑셀 데이터 생성
       let finalName = item.displayName;
       if (isSeqMode) {
           const seqStr = formatStr.replace('00', String(item.seq).padStart(2, '0'));
@@ -679,7 +723,7 @@
       }
       
       item.rows.forEach(rowIdx => {
-        finalData[rowIdx][codeColKey] = item.finalCode.trim(); // 저장할땐 trim
+        finalData[rowIdx][codeColKey] = item.finalCode.trim();
         finalData[rowIdx][targetColKey] = finalName; 
       });
     });
@@ -704,7 +748,9 @@
             });
             const writable = await handle.createWritable();
             await writable.write(blob); await writable.close();
-            showToast("✅ 저장 완료!");
+            showToast("✅ 저장 완료 & 규칙 업데이트!");
+            // 규칙 관리자 화면 갱신용
+            if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
         } catch (err) { if(err.name !== 'AbortError') alert("저장 실패: " + err); }
     } else {
         saveAs(blob, originalFile.name);
@@ -718,7 +764,8 @@
     const blob = new Blob([wbOut], {type: "application/octet-stream"});
     const originalFile = document.getElementById('fileInput').files[0];
     saveAs(blob, originalFile.name); 
-    showToast("✅ 저장 완료!");
+    showToast("✅ 저장 완료 & 규칙 업데이트!");
+    if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
   }
 
   // 옵션 보기 모달
