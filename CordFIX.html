@@ -2,191 +2,186 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (안전모드)</title>
+  <title>옵션 마스터 (순번 제어)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
-    /* --- 메인 스타일 --- */
+    /* --- 스타일 설정 --- */
     :root {
-      --primary: #3b82f6; --bg: #f1f5f9; --card: #ffffff; --border: #e2e8f0;
-      --text: #1e293b; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
-      --purple: #8b5cf6; --github: #24292f; --gray-btn: #94a3b8;
+      --primary: #3b82f6; --primary-hover: #2563eb;
+      --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0;
+      --text: #1e293b; --text-sub: #64748b;
+      --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --purple: #8b5cf6;
+      --linked-bg: #eff6ff; --linked-border: #3b82f6;
     }
     body {
       font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text);
-      margin: 0; padding: 20px; display: flex; justify-content: center;
+      margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box;
     }
     .container {
-      width: 1500px; max-width: 98vw; background: var(--card); border-radius: 16px;
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 92vh;
+      width: 1600px; max-width: 98vw; background: var(--card); border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; height: 95vh;
     }
     
+    /* 헤더 */
     .header {
-      padding: 20px 30px; border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center; background: #fff;
+      padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff;
     }
-    .header h1 { margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; }
-    .header p { margin: 4px 0 0; font-size: 13px; color: #64748b; }
+    .header h1 { margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }
+    .header p { margin: 4px 0 0; font-size: 13px; color: var(--text-sub); }
 
+    /* 컨트롤 패널 */
     .controls {
-      padding: 16px 30px; background: #f8fafc; border-bottom: 1px solid var(--border);
+      padding: 14px 24px; background: #f1f5f9; border-bottom: 1px solid var(--border);
       display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
     }
-    .input-group { display: flex; flex-direction: column; gap: 6px; }
-    .input-group label { font-size: 12px; font-weight: 700; color: #475569; }
+    .input-group { display: flex; flex-direction: column; gap: 4px; }
+    .input-group label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
     
     .file-label {
-      background: #fff; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px;
-      font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; transition: 0.2s;
+      background: #fff; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; transition: 0.2s; min-width: 200px;
     }
-    .file-label:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+    .file-label:hover { border-color: var(--primary); color: var(--primary); }
     input[type="file"] { display: none; }
+    
+    input[type="text"] {
+      padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--primary); }
 
+    /* 버튼 */
     .btn {
-      padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px;
+      padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
     }
     .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: #2563eb; }
-    
-    .btn-overwrite { background: #0f172a; color: #fff; margin-left: auto; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2); }
-    .btn-overwrite:hover:not(:disabled) { background: #334155; transform: translateY(-1px); }
-    
-    .btn-newfile { background: var(--success); color: #fff; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); }
-    .btn-newfile:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
-
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #fff; box-shadow: 0 2px 4px rgba(16,185,129,0.2); }
+    .btn-success:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
     .btn-danger { background: #fee2e2; color: var(--danger); }
     .btn-danger:hover { background: #fecaca; }
-    
-    .btn-github { background: var(--github); color: #fff; }
-    .btn-github:hover { background: #000; }
+    .btn-dark { background: #334155; color: #fff; }
+    .btn-dark:hover { background: #1e293b; }
+    .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+    .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none; }
 
-    .btn:disabled { background: #e2e8f0; cursor: not-allowed; color: #94a3b8; box-shadow: none; transform: none !important; }
-
-    .stats-bar {
-      padding: 12px 30px; background: #fff; border-bottom: 1px solid var(--border);
-      font-size: 13px; display: flex; gap: 24px; color: #64748b; font-weight: 500;
+    /* 툴바 */
+    .toolbar {
+      padding: 10px 24px; background: #fff; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center;
     }
-    .stat-item b { font-weight: 800; margin-left: 4px; font-size: 14px; }
+    .divider { width: 1px; height: 20px; background: #e2e8f0; margin: 0 4px; }
     
+    .seq-control-box {
+      display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #e0f2fe; border-radius: 6px; border: 1px solid #bae6fd;
+    }
+    .seq-check { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; color: #0369a1; cursor: pointer; }
+    .seq-input { width: 60px; padding: 4px 8px; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; }
+
+    /* 통계바 */
+    .stats-bar {
+      padding: 8px 24px; background: #f8fafc; border-bottom: 1px solid var(--border);
+      font-size: 12px; display: flex; gap: 16px; color: var(--text-sub);
+    }
+    .stat-item b { font-weight: 800; margin-left: 3px; }
+
+    /* 테이블 */
     .table-area { flex: 1; overflow-y: auto; position: relative; background: #fff; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     thead th {
-      position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 14px 20px;
-      text-align: left; color: #64748b; font-weight: 600; border-bottom: 1px solid var(--border);
-      text-transform: uppercase; letter-spacing: 0.5px;
+      position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 10px 12px;
+      text-align: left; color: var(--text-sub); font-weight: 600; border-bottom: 1px solid var(--border);
     }
-    tbody td { padding: 10px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
-    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: var(--text); }
+    
+    /* 행 스타일 */
+    tr { transition: background 0.1s; }
+    tr:hover { background: #f8fafc; }
+    tr.linked { background-color: var(--linked-bg); }
+    tr.linked td:first-child { box-shadow: inset 3px 0 0 var(--linked-border); }
+    tr.dragging { opacity: 0.5; background: #e0e7ff; }
+    tr.drag-over { border-top: 2px solid var(--primary); }
 
-    /* 입력 그룹 스타일 (버튼 + 인풋) */
-    .code-input-group { display: flex; gap: 6px; width: 100%; align-items: center; }
-    
-    /* 공통 인풋 스타일 */
+    /* 인풋 스타일 */
     .common-input {
-      width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
-      font-family: 'Pretendard', sans-serif; font-size: 13px; transition: 0.2s; box-sizing: border-box;
+      width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 4px;
+      font-family: 'Pretendard', sans-serif; font-size: 13px; background: transparent; transition: 0.2s; box-sizing: border-box;
     }
-    .common-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: #fff; z-index: 1; position: relative; }
+    .common-input:hover { border-color: #cbd5e1; background: #fff; }
+    .common-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
     
-    .code-input { font-family: 'Monaco', monospace; }
+    .code-input { font-family: 'Monaco', monospace; border: 1px solid #e2e8f0; background: #fff; }
     .code-input.empty { border-color: var(--danger); background: #fef2f2; }
     .code-input.short { border-color: var(--warning); background: #fffbeb; }
     .code-input.auto-code { border-color: var(--purple); background: #f5f3ff; color: #5b21b6; font-weight: 600; }
     .code-input.auto-name { border-color: var(--success); background: #f0fdf4; color: #065f46; font-weight: 600; }
 
-    /* 매칭X 버튼 */
+    /* 버튼 & 배지 */
+    .code-input-group { display: flex; gap: 4px; width: 100%; align-items: center; }
     .btn-no-match {
-      padding: 0 10px; height: 38px; font-size: 11px; font-weight: 700; 
+      padding: 0 6px; height: 34px; font-size: 11px; font-weight: 700; 
       border: 1px solid #cbd5e1; background: #fff; color: #94a3b8;
-      border-radius: 6px; cursor: pointer; white-space: nowrap; transition: 0.2s;
+      border-radius: 4px; cursor: pointer; white-space: nowrap;
     }
-    .btn-no-match:hover { background: #f1f5f9; color: #64748b; }
-    .btn-no-match.active { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+    .btn-no-match:hover { color: var(--text-sub); border-color: var(--text-sub); }
+    .btn-no-match.active { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
 
-    /* 옵션 보기 버튼 */
-    .btn-view-opt {
-      font-size: 12px; padding: 6px 10px; background: #f1f5f9; border: 1px solid #cbd5e1;
-      border-radius: 6px; color: #475569; cursor: pointer; width: 100%;
-    }
-    .btn-view-opt:hover { background: #e2e8f0; color: #1e293b; }
-
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; min-width: 50px; text-align:center; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; display: inline-block; min-width: 40px; text-align:center; }
     .badge-err { background: #fee2e2; color: var(--danger); }
     .badge-warn { background: #fef3c7; color: #d97706; }
-    .badge-ok { background: #f1f5f9; color: #64748b; }
+    .badge-ok { background: #f1f5f9; color: var(--text-sub); }
     .badge-code { background: #ede9fe; color: var(--purple); }
     .badge-name { background: #dcfce7; color: var(--success); }
 
-    /* 컬럼 너비 최적화 */
-    .col-status { width: 90px; text-align: center; }
-    .col-name   { width: 25%; } 
-    .col-old    { width: 10%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .col-code   { width: 40%; }
-    .col-info   { width: 100px; text-align: center; }
+    .btn-view-opt {
+      font-size: 11px; padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1;
+      border-radius: 4px; color: var(--text-sub); cursor: pointer; width: 100%;
+    }
+    .btn-view-opt:hover { background: #e2e8f0; color: var(--text); }
 
-    /* --- 모달 --- */
-    .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center;
-    }
-    .modal-content {
-      background: #fff; width: 850px; max-width: 95vw; height: 85vh;
-      border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .modal-header {
-      padding: 20px 24px; border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; }
-    .modal-close { cursor: pointer; font-size: 24px; color: #94a3b8; line-height: 1; }
-    .modal-close:hover { color: #ef4444; }
+    /* 컬럼 너비 */
+    .col-chk    { width: 30px; text-align: center; }
+    .col-drag   { width: 30px; text-align: center; cursor: grab; color: #cbd5e1; }
+    .col-seq    { width: 60px; text-align: center; font-weight: 700; color: var(--text-sub); }
+    .col-status { width: 80px; text-align: center; }
+    .col-name   { width: 25%; }
+    .col-old    { width: 10%; color: #94a3b8; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-code   { width: 30%; }
+    .col-info   { width: 90px; text-align: center; }
 
+    input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+    .link-icon { color: #cbd5e1; font-size: 14px; margin-right: 4px; width: 14px; display: inline-block; }
+    .link-icon.active { color: var(--primary); font-weight: bold; }
+
+    /* 모달 등 나머지 스타일은 기존 유지 */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: #fff; width: 800px; max-width: 95vw; height: 80vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 16px; font-weight: 800; }
+    .modal-close { cursor: pointer; font-size: 20px; color: #94a3b8; }
     .modal-body { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
     
-    /* GitHub 섹션 */
-    .github-section {
-      margin: 20px 24px; padding: 16px; background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;
-    }
-    .gh-title { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .gh-inputs { display: flex; gap: 8px; margin-bottom: 10px; }
-    .gh-input { flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
-
-    .tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--border); }
-    .tab {
-      padding: 10px 20px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer;
-      border-top-left-radius: 8px; border-top-right-radius: 8px; background: #e2e8f0;
-    }
+    /* GitHub Section */
+    .github-section { margin: 16px 24px; padding: 12px; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+    .gh-inputs { display: flex; gap: 8px; margin-bottom: 8px; }
+    .gh-input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; padding: 0 24px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; border-radius: 6px 6px 0 0; }
     .tab.active { background: #fff; color: var(--primary); border: 1px solid var(--border); border-bottom: 1px solid #fff; margin-bottom: -1px; }
+    
+    .rule-list { flex: 1; overflow-y: auto; padding: 0 24px 24px; background: #fff; }
+    .rule-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; gap: 10px; }
+    .rule-key { flex: 1; font-size: 12px; font-weight: 500; }
+    .rule-val-input { flex: 1; padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 12px; font-family: monospace; }
+    
+    /* 옵션 테이블 */
+    .opt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .opt-table th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .opt-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
 
-    .search-bar { padding: 16px 24px; background: #fff; display: flex; border-bottom: 1px solid #f1f5f9; }
-    .search-input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-
-    .rule-list { flex: 1; overflow-y: auto; padding: 0 24px 24px 24px; background: #fff; }
-    .rule-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; }
-    .rule-key { flex: 1; font-size: 13px; color: #475569; font-weight: 500; }
-    .rule-arrow { color: #cbd5e1; font-size: 14px; }
-    .rule-val-input { flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 13px; font-family: monospace; }
-    .rule-val-input:focus { border-color: var(--primary); outline: none; }
-    .rule-del { padding: 6px 10px; background: #fee2e2; color: #ef4444; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .rule-del:hover { background: #fecaca; }
-    .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
-
-    /* 옵션 보기 모달 전용 스타일 */
-    .opt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .opt-table th { background: #f1f5f9; color: #475569; padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    .opt-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-    .opt-table tr:last-child td { border-bottom: none; }
-
-    /* 토스트 메시지 */
-    #toast {
-      visibility: hidden; min-width: 250px; margin-left: -125px;
-      background-color: #333; color: #fff; text-align: center;
-      border-radius: 50px; padding: 16px; position: fixed; z-index: 3000;
-      left: 50%; bottom: 30px; font-size: 15px; opacity: 0;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: opacity 0.5s, bottom 0.5s;
-    }
+    #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 3000; left: 50%; transform: translateX(-50%); bottom: 30px; font-size: 14px; opacity: 0; transition: 0.3s; }
     #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
   </style>
 </head>
@@ -195,11 +190,11 @@
 <div class="container">
   <div class="header">
     <div>
-      <h1>🛠️ 관리코드 스마트 수정기</h1>
-      <p>안전모드: 기존 코드가 있으면 이름 규칙을 적용하지 않습니다. (BK/BE 덮어쓰기 방지)</p>
+      <h1>🔢 옵션 마스터 (순번 제어판)</h1>
+      <p>순번 끄기/켜기 + 코드 관리 + 안전모드 통합</p>
     </div>
     <div style="display:flex; gap:8px;">
-      <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙 관리 / 동기화</button>
+      <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
       <button class="btn btn-danger" onclick="resetAll()">🗑️ 초기화</button>
     </div>
   </div>
@@ -208,13 +203,38 @@
     <div class="input-group">
       <label>파일 선택</label>
       <label class="file-label">
-        <span id="fileName">📂 엑셀 파일 열기 (xls, xlsx)</span>
+        <span id="fileName">📂 엑셀 파일 열기</span>
         <input type="file" id="fileInput" accept=".xls,.xlsx" onchange="handleFile(this)">
       </label>
     </div>
+    
     <div style="flex:1;"></div>
-    <button class="btn btn-overwrite" id="dnBtnOverwrite" onclick="downloadOverwrite()" disabled title="엑셀파일을 끄고 눌러야 합니다">💾 덮어쓰기 저장</button>
-    <button class="btn btn-newfile" id="dnBtnNew" onclick="downloadNew()" disabled>📥 새 파일로 저장</button>
+    
+    <button class="btn btn-dark" onclick="downloadOverwrite()" disabled id="btnSave1" title="엑셀파일을 닫고 누르세요">💾 덮어쓰기 저장</button>
+    <button class="btn btn-success" onclick="downloadNew()" disabled id="btnSave2">📥 새 파일로 저장</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="seq-control-box">
+      <label class="seq-check">
+        <input type="checkbox" id="useSeq" onchange="toggleSeqMode()">
+        순번 정렬 적용
+      </label>
+      <input type="text" id="formatStr" class="seq-input" value="00) " placeholder="서식" title="예: 00) or [00]" oninput="recalcNumbers()" style="display:none;">
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-outline" onclick="groupSelected()">🔗 선택 묶기</button>
+    <button class="btn btn-outline" onclick="ungroupSelected()">💔 묶기 해제</button>
+    <button class="btn btn-outline" onclick="resetOrder()">🔄 순서 초기화</button>
+    
+    <div class="divider"></div>
+    
+    <div class="input-group" style="flex-direction:row; align-items:center;">
+      <label style="margin:0;">🔍 검색:</label>
+      <input type="text" id="searchInput" placeholder="상품명/코드..." oninput="renderTable()" style="padding:6px; width:120px;">
+    </div>
   </div>
 
   <div class="stats-bar">
@@ -225,18 +245,21 @@
   </div>
 
   <div class="table-area">
-    <table>
+    <table id="mainTable">
       <thead>
         <tr>
+          <th class="col-chk"><input type="checkbox" id="chkAll" onchange="toggleAll(this)"></th>
+          <th class="col-drag"></th>
+          <th class="col-seq">NO.</th>
           <th class="col-status">상태</th>
-          <th class="col-name">상품명 (제품선택) - 수정가능</th>
-          <th class="col-old">기존 코드</th>
-          <th class="col-code">관리코드 (수정 결과)</th>
+          <th class="col-name">상품명 (제품선택)</th>
+          <th class="col-old">기존코드</th>
+          <th class="col-code">관리코드 (수정/입력)</th>
           <th class="col-info">옵션</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="5" style="text-align:center; padding:100px; color:#cbd5e1;">파일을 업로드하면 자동으로 분석합니다.</td></tr>
+        <tr><td colspan="8" style="text-align:center; padding:100px; color:#cbd5e1;">엑셀 파일을 업로드해주세요.</td></tr>
       </tbody>
     </table>
   </div>
@@ -245,29 +268,29 @@
 <div id="ruleModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-header">
-      <div class="modal-title">규칙 관리자 & 클라우드</div>
+      <div class="modal-title">규칙 관리 & 클라우드</div>
       <div class="modal-close" onclick="closeRuleManager()">&times;</div>
     </div>
     <div class="modal-body">
       <div class="github-section">
-        <div class="gh-title">☁️ GitHub 클라우드 동기화</div>
+        <div class="gh-title" style="font-size:12px; font-weight:700; margin-bottom:6px;">☁️ GitHub 동기화</div>
         <div class="gh-inputs">
-          <input type="password" id="ghToken" class="gh-input" placeholder="GitHub Token (ghp_...)">
-          <input type="text" id="ghRepo" class="gh-input" placeholder="User/Repo (예: my/data)" value="EasyHara/code_fix_data">
-          <input type="text" id="ghPath" class="gh-input" placeholder="파일명" value="code_rules.json" style="width:120px;">
+          <input type="password" id="ghToken" class="gh-input" placeholder="Token (ghp_...)">
+          <input type="text" id="ghRepo" class="gh-input" placeholder="User/Repo" value="EasyHara/code_fix_data">
+          <input type="text" id="ghPath" class="gh-input" placeholder="파일명" value="code_rules.json" style="width:100px;">
         </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-github" style="background:#475569;" onclick="saveGithubConfig()">토큰 저장</button>
-          <button class="btn btn-github" onclick="uploadToGithub()">☁️ 업로드 (백업)</button>
-          <button class="btn btn-success" onclick="loadFromGithub()">☁️ 다운로드 (복원)</button>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-outline" onclick="saveGithubConfig()" style="font-size:11px;">설정 저장</button>
+          <button class="btn btn-dark" onclick="uploadToGithub()" style="font-size:11px;">☁️ 업로드 (백업)</button>
+          <button class="btn btn-success" onclick="loadFromGithub()" style="font-size:11px;">☁️ 다운로드 (복원)</button>
         </div>
       </div>
       <div class="tabs">
         <div class="tab active" id="tabCode" onclick="switchTab('code')">⚡ 코드 매칭 (<span id="cntCode">0</span>)</div>
         <div class="tab" id="tabName" onclick="switchTab('name')">🌿 이름 매칭 (<span id="cntName">0</span>)</div>
       </div>
-      <div class="search-bar">
-        <input type="text" class="search-input" id="ruleSearch" placeholder="검색어 입력..." oninput="renderRuleList()">
+      <div class="search-bar" style="padding:10px 24px;">
+        <input type="text" id="ruleSearch" placeholder="규칙 검색..." style="width:100%; padding:8px;" oninput="renderRuleList()">
       </div>
       <div class="rule-list" id="ruleListArea"></div>
     </div>
@@ -289,19 +312,21 @@
 <div id="toast"></div>
 
 <script>
+  // 저장소 키
   const DB_KEY_CODE = "easyHara_db_by_code_v1"; 
   const DB_KEY_NAME = "easyHara_db_by_name_v1"; 
 
-  let globalData = [];
-  let groupData = []; 
-  let targetColKey = "";
-  let codeColKey = "";
-  let colorColKey = ""; 
-  let sizeColKey = ""; 
-  let stockColKey = ""; 
+  // 전역 변수
+  let globalData = []; // 원본 엑셀 데이터
+  let groupData = [];  // 그룹핑 및 작업 데이터
+  let targetColKey = "", codeColKey = "";
+  let colorColKey = "", sizeColKey = "", stockColKey = "";
   let currentTab = 'code'; 
+  let lastCheckedIndex = null;
+  let dragSrcIndex = null;
+  let isSeqMode = false; // 순번 모드 여부
 
-  // GitHub 설정 로드
+  // 초기화
   document.addEventListener('DOMContentLoaded', () => {
     const ghConfig = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
     if(ghConfig.token) document.getElementById('ghToken').value = ghConfig.token;
@@ -309,6 +334,7 @@
     if(ghConfig.path) document.getElementById('ghPath').value = ghConfig.path;
   });
 
+  // 1. 파일 로드
   function handleFile(input) {
     const file = input.files[0];
     if (!file) return;
@@ -323,16 +349,15 @@
 
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
-      const keys = Object.keys(globalData[0]);
       // 컬럼 자동 인식
+      const keys = Object.keys(globalData[0]);
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
-      
       colorColKey = keys.find(k => /색상|color|opt1/i.test(k.replace(/\s/g,'')));
       sizeColKey = keys.find(k => /사이즈|size|opt2/i.test(k.replace(/\s/g,'')));
       stockColKey = keys.find(k => /재고|수량|qty|stock/i.test(k.replace(/\s/g,'')));
 
-      if (!targetColKey) { alert("제품선택 컬럼을 찾을 수 없습니다."); return; }
+      if (!targetColKey) { alert("제품선택(상품명) 컬럼을 찾을 수 없습니다."); return; }
       if (!codeColKey) { codeColKey = "관리코드"; }
 
       processGroups();
@@ -340,6 +365,7 @@
     reader.readAsArrayBuffer(file);
   }
 
+  // 2. 데이터 그룹화 및 로직 적용
   function processGroups() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
@@ -350,6 +376,7 @@
 
     const map = new Map();
 
+    // 1차 그룹화
     globalData.forEach((row, idx) => {
       const rawName = String(row[targetColKey] || "");
       const cleanName = rawName.replace(cleanNameRegex, "").trim();
@@ -370,6 +397,7 @@
       map.get(uniqueGroupKey).rows.push(idx);
     });
 
+    // 2차 분석
     map.forEach((val, uniqueGroupKey) => {
       let finalCode = val.originalCode;
       let status = "ok";
@@ -379,257 +407,291 @@
       const isProductOne = /^[\s\[\(]*(?:no\.?)?0*1[\s\]\)\.\-]/i.test(val.rawName);
       if (isProductOne) { excludeSave = true; }
 
-      // 1. 코드 매칭 (코드 수정) - 최우선
       if (val.originalCode && dbCode[val.originalCode]) {
         finalCode = dbCode[val.originalCode];
         status = "auto"; matchType = "code"; codeMatch++;
-      } 
-      // 2. 이름 매칭 (공란 채움) - 기존 코드가 없을 때만 적용!
-      // [수정됨] 기존 코드가 있는데 DB에 이름 규칙이 있다고 해서 덮어쓰면 안됨. (BK/BE 구분 유지)
-      else if (!val.originalCode && dbName[val.cleanName]) { 
+      } else if (!val.originalCode && dbName[val.cleanName]) { 
         if (!isProductOne) {
             finalCode = dbName[val.cleanName];
             status = "auto"; matchType = "name"; nameMatch++;
         }
       }
-      // [참고] 기존 코드가 있고, 코드 규칙은 없는데 이름 규칙은 있다면? -> 기존 코드 유지 (안전 모드)
       
       if (!finalCode) { status = "empty"; errCount++; } 
       else if (finalCode.length < 3) { status = "short"; errCount++; }
 
       groupData.push({
-        cleanName: val.cleanName, displayName: val.rawName, originalCode: val.originalCode,
-        finalCode: finalCode, rows: val.rows, 
-        status: status, matchType: matchType, excludeSave: excludeSave
+        cleanName: val.cleanName, // 순번제거 이름
+        rawName: val.rawName,     // 원본 전체 이름
+        displayName: val.rawName, // 현재 화면에 표시될 이름 (모드에 따라 다름)
+        originalCode: val.originalCode,
+        finalCode: finalCode, 
+        rows: val.rows, 
+        status: status, matchType: matchType, excludeSave: excludeSave,
+        linkToPrev: false, // 순번 묶기용
+        seq: 0,
+        isChecked: false
       });
     });
 
-    renderTable(codeMatch, nameMatch, errCount);
+    // 초기 모드 설정 (기본: 순번 체크 안함)
+    toggleSeqMode(false); // 초기화 시 강제 업데이트
+    
+    // 통계 갱신
+    document.getElementById('codeMatchCount').innerText = codeMatch;
+    document.getElementById('nameMatchCount').innerText = nameMatch;
+    document.getElementById('errCount').innerText = errCount;
+    document.getElementById('btnSave1').disabled = false;
+    document.getElementById('btnSave2').disabled = false;
   }
 
-  function renderTable(cMatch, nMatch, err) {
+  // [신규] 순번 모드 토글
+  function toggleSeqMode(forceVal) {
+    const chk = document.getElementById('useSeq');
+    if (forceVal !== undefined) chk.checked = forceVal;
+    
+    isSeqMode = chk.checked;
+    const formatInput = document.getElementById('formatStr');
+    
+    if (isSeqMode) {
+        formatInput.style.display = 'block';
+        // 모드 켜짐: displayName을 cleanName(순번제거됨)으로 변경하여 보여줌
+        // 실제 순번은 별도 컬럼에 표시
+        groupData.forEach(item => {
+            item.displayName = item.cleanName; 
+        });
+    } else {
+        formatInput.style.display = 'none';
+        // 모드 꺼짐: displayName을 rawName(원본)으로 복구
+        // 단, 사용자가 수정한 내역이 있다면 유지해야 하는데, 
+        // 여기서는 단순화를 위해 모드 전환 시 원본/클린 이름으로 리셋함.
+        // (수정 사항 유지하려면 복잡해지므로, 모드 결정 후 수정하는 것을 권장)
+        groupData.forEach(item => {
+            item.displayName = item.rawName;
+        });
+    }
+    recalcNumbers();
+  }
+
+  // 3. 순번 재계산
+  function recalcNumbers() {
+    let currentSeq = 0;
+    groupData.forEach((item, i) => {
+      if (i > 0 && item.linkToPrev) {
+         item.seq = groupData[i-1].seq;
+      } else {
+         currentSeq++;
+         item.seq = currentSeq;
+      }
+    });
+    renderTable();
+  }
+
+  // 4. 테이블 렌더링
+  function renderTable() {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = "";
+    const formatStr = document.getElementById('formatStr').value || "00) ";
+    const query = document.getElementById('searchInput').value.toLowerCase();
 
-    groupData.forEach((item, idx) => {
+    const visibleItems = groupData.map((item, idx) => ({...item, orgIdx: idx}))
+      .filter(item => !query || item.displayName.toLowerCase().includes(query) || item.finalCode.toLowerCase().includes(query));
+
+    if(visibleItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:50px; color:#94a3b8;">검색 결과가 없습니다.</td></tr>';
+        return;
+    }
+
+    document.getElementById('totalCount').innerText = groupData.length;
+
+    const fragment = document.createDocumentFragment();
+
+    visibleItems.forEach((item) => {
+      const i = item.orgIdx;
       const tr = document.createElement('tr');
+      tr.setAttribute('draggable', true);
+      tr.dataset.index = i;
+      if(item.linkToPrev) tr.classList.add('linked');
+
+      // 배지
       let badge = "", inputClass = "code-input";
-      
-      if (item.matchType === 'code') { badge = `<span class="badge badge-code">⚡ 코드수정</span>`; inputClass += " auto-code"; }
-      else if (item.matchType === 'name') { badge = `<span class="badge badge-name">🌿 공란채움</span>`; inputClass += " auto-name"; }
-      else if (item.status === 'empty') { badge = `<span class="badge badge-err">필수입력</span>`; inputClass += " empty"; }
-      else if (item.status === 'short') { badge = `<span class="badge badge-warn">확인필요</span>`; inputClass += " short"; }
-      else { badge = `<span class="badge badge-ok">기존유지</span>`; }
+      if (item.matchType === 'code') { badge = `<span class="badge badge-code">⚡ 코드</span>`; inputClass += " auto-code"; }
+      else if (item.matchType === 'name') { badge = `<span class="badge badge-name">🌿 이름</span>`; inputClass += " auto-name"; }
+      else if (item.status === 'empty') { badge = `<span class="badge badge-err">필수</span>`; inputClass += " empty"; }
+      else if (item.status === 'short') { badge = `<span class="badge badge-warn">확인</span>`; inputClass += " short"; }
+      else { badge = `<span class="badge badge-ok">기존</span>`; }
 
       const btnClass = item.excludeSave ? "btn-no-match active" : "btn-no-match";
       const btnText = item.excludeSave ? "🔕 매칭X" : "🔔 매칭O";
+      
+      // 순번 표시 로직
+      let seqText = "";
+      let linkIcon = "";
+      
+      if (isSeqMode) {
+          seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
+          linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
+      } else {
+          seqText = "-"; // 모드 꺼지면 순번 안보임
+      }
 
       tr.innerHTML = `
+        <td class="col-chk"><input type="checkbox" class="row-chk" data-idx="${i}" ${item.isChecked ? 'checked' : ''}></td>
+        <td class="col-drag">⋮⋮</td>
+        <td class="col-seq">${linkIcon}${seqText}</td>
         <td class="col-status">${badge}</td>
         <td class="col-name">
           <input type="text" class="common-input name-input" value="${item.displayName}" 
-            onchange="updateName(${idx}, this.value)" onkeydown="handleKeyDown(event, ${idx}, 'name')">
+            onchange="updateName(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'name')">
         </td>
         <td class="col-old" title="${item.originalCode}">${item.originalCode || '-'}</td>
         <td class="col-code">
           <div class="code-input-group">
-            <button class="${btnClass}" onclick="toggleExclude(${idx})">${btnText}</button>
+            <button class="${btnClass}" onclick="toggleExclude(${i})" title="자동완성 규칙 저장 여부">${btnText}</button>
             <input type="text" class="common-input ${inputClass}" value="${item.finalCode}" 
-              onchange="updateCode(${idx}, this.value)" onkeydown="handleKeyDown(event, ${idx}, 'code')">
+              onchange="updateCode(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'code')">
           </div>
         </td>
         <td class="col-info">
-          <button class="btn-view-opt" onclick="openOptModal(${idx})">🔎 ${item.rows.length}개 보기</button>
+          <button class="btn-view-opt" onclick="openOptModal(${i})">🔎 ${item.rows.length}개 보기</button>
         </td>
       `;
-      tbody.appendChild(tr);
+      
+      addDragEvents(tr);
+      tr.querySelector('.row-chk').addEventListener('click', (e) => handleCheck(e, i));
+
+      fragment.appendChild(tr);
     });
-
-    document.getElementById('totalCount').innerText = groupData.length;
-    document.getElementById('codeMatchCount').innerText = cMatch;
-    document.getElementById('nameMatchCount').innerText = nMatch;
-    document.getElementById('errCount').innerText = err;
-    
-    document.getElementById('dnBtnOverwrite').disabled = false;
-    document.getElementById('dnBtnNew').disabled = false;
+    tbody.appendChild(fragment);
   }
 
-  // 키보드 네비게이션
-  function handleKeyDown(e, idx, type) {
-    const rows = groupData.length;
-    let nextIdx = idx;
+  // --- 로직 함수들 ---
 
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        if(e.shiftKey) nextIdx = idx - 1; 
-        else nextIdx = idx + 1;
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        nextIdx = idx - 1;
-    }
+  function updateName(idx, val) { groupData[idx].displayName = val; }
 
-    if (nextIdx >= 0 && nextIdx < rows) {
-        const trs = document.getElementById('tbody').children;
-        let targetInput;
-        if (type === 'name') {
-            targetInput = trs[nextIdx].querySelector('.name-input');
-        } else {
-            const inputs = trs[nextIdx].querySelectorAll('.common-input');
-            targetInput = inputs[1]; 
-        }
-        if (targetInput) { targetInput.focus(); targetInput.select(); }
-    }
-  }
-
-  function updateName(idx, newName) {
-    groupData[idx].displayName = newName;
-  }
-
-  // --- 옵션 보기 모달 ---
-  function openOptModal(idx) {
+  function updateCode(idx, val) {
+    val = val.trim();
     const item = groupData[idx];
-    document.getElementById('optModalTitle').textContent = `[${item.displayName}] 상세 옵션 (${item.rows.length}개)`;
-    const listArea = document.getElementById('optListArea');
-    
-    let html = `
-      <table class="opt-table">
-        <thead>
-          <tr>
-            <th>색상</th>
-            <th>사이즈</th>
-            <th>재고</th>
-            <th>원본 옵션명 (참고)</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    item.rows.forEach(rowIdx => {
-        const row = globalData[rowIdx];
-        const color = colorColKey ? (row[colorColKey] || '-') : '-';
-        const size = sizeColKey ? (row[sizeColKey] || '-') : '-';
-        const stock = stockColKey ? (row[stockColKey] || '-') : '-';
-        const name = row[targetColKey] || '';
-
-        html += `
-          <tr>
-            <td style="font-weight:bold; color:#475569;">${color}</td>
-            <td>${size}</td>
-            <td>${stock}</td>
-            <td style="color:#94a3b8; font-size:12px;">${name}</td>
-          </tr>
-        `;
-    });
-
-    html += `</tbody></table>`;
-    listArea.innerHTML = html;
-    document.getElementById('optModal').style.display = 'flex';
-  }
-
-  function closeOptModal() {
-    document.getElementById('optModal').style.display = 'none';
-  }
-
-  // 매칭 제외 토글
-  function toggleExclude(idx) {
-    const item = groupData[idx];
-    item.excludeSave = !item.excludeSave;
-    
-    if (item.excludeSave) {
-        const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
-        const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
-        if (item.originalCode) delete dbCode[item.originalCode];
-        delete dbName[item.cleanName];
-        localStorage.setItem(DB_KEY_CODE, JSON.stringify(dbCode));
-        localStorage.setItem(DB_KEY_NAME, JSON.stringify(dbName));
-    } else {
-        updateCode(idx, item.finalCode);
-    }
-
-    const tr = document.getElementById('tbody').children[idx];
-    const btn = tr.querySelector('.btn-no-match');
-    btn.className = item.excludeSave ? "btn-no-match active" : "btn-no-match";
-    btn.textContent = item.excludeSave ? "🔕 매칭X" : "🔔 매칭O";
-  }
-
-  function updateCode(idx, newCode) {
-    newCode = newCode.trim();
-    const item = groupData[idx];
-    item.finalCode = newCode;
-    
-    if (item.excludeSave) return;
+    item.finalCode = val;
+    if(item.excludeSave) return; 
 
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
     
-    if (newCode) {
-      if (item.originalCode && item.originalCode !== newCode) {
-        dbCode[item.originalCode] = newCode;
-      }
-      // 이름 매칭 규칙 저장
-      // 주의: 만약 다른 코드(BK/BE)를 가진 같은 이름의 상품이 있다면,
-      // 마지막에 수정한 놈이 DB를 덮어쓰게 됨. 
-      // 하지만 '안전 모드' 덕분에 다음에 불러올 때는 기존 코드가 있으면 무시되므로 괜찮음.
-      // 오직 '공란'일 때만 이 규칙을 쓰게 됨.
-      dbName[item.cleanName] = newCode;
+    if (val) {
+      if (item.originalCode && item.originalCode !== val) dbCode[item.originalCode] = val;
+      dbName[item.cleanName] = val;
     } else {
-      if(item.originalCode) delete dbCode[item.originalCode];
+      if (item.originalCode) delete dbCode[item.originalCode];
       delete dbName[item.cleanName];
     }
     localStorage.setItem(DB_KEY_CODE, JSON.stringify(dbCode));
     localStorage.setItem(DB_KEY_NAME, JSON.stringify(dbName));
   }
 
-  // 1. 덮어쓰기 저장 (Chrome/Edge)
-  async function downloadOverwrite() {
-    if (globalData.length === 0) return;
-    const wb = createWorkbook();
-    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbOut], {type: "application/octet-stream"});
-    const originalFile = document.getElementById('fileInput').files[0];
-    const fileName = originalFile ? originalFile.name : "result.xlsx";
+  function toggleExclude(idx) {
+    groupData[idx].excludeSave = !groupData[idx].excludeSave;
+    updateCode(idx, groupData[idx].finalCode);
+    renderTable();
+  }
 
-    if (window.showSaveFilePicker) {
-        try {
-            const handle = await window.showSaveFilePicker({
-                suggestedName: fileName,
-                types: [{ description: 'Excel File', accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']} }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            showToast("✅ 저장되었습니다!");
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                alert("⚠️ 오류: 파일이 열려있다면 닫고 다시 시도하세요.\n" + err);
-            }
-        }
-    } else {
-        alert("이 브라우저는 덮어쓰기를 지원하지 않습니다.\n[새 파일로 저장]을 이용해주세요.");
-        saveAs(blob, fileName);
+  function handleKeyDown(e, idx, type) {
+    const rows = groupData.length;
+    let nextIdx = idx;
+    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault(); nextIdx = e.shiftKey ? idx - 1 : idx + 1;
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); nextIdx = idx - 1;
+    }
+    if (nextIdx >= 0 && nextIdx < rows) {
+        const trs = document.querySelectorAll('#tbody tr');
+        const targetInput = type === 'name' 
+            ? document.querySelectorAll('.name-input')[nextIdx] 
+            : document.querySelectorAll('.code-input-group input')[nextIdx];
+        if(targetInput) { targetInput.focus(); targetInput.select(); }
     }
   }
 
-  // 2. 새 파일로 저장 (파일명 유지)
-  function downloadNew() {
-    if (globalData.length === 0) return;
-    const wb = createWorkbook();
-    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbOut], {type: "application/octet-stream"});
-    
-    const originalFile = document.getElementById('fileInput').files[0];
-    const fileName = originalFile ? originalFile.name : "result.xlsx";
-    
-    saveAs(blob, fileName);
-    showToast("✅ 저장되었습니다!");
+  function handleCheck(e, idx) {
+    const checked = e.target.checked;
+    groupData[idx].isChecked = checked;
+    if (e.shiftKey && lastCheckedIndex !== null) {
+      const start = Math.min(lastCheckedIndex, idx);
+      const end = Math.max(lastCheckedIndex, idx);
+      for(let k=start; k<=end; k++) groupData[k].isChecked = checked;
+      renderTable();
+    }
+    lastCheckedIndex = idx;
   }
 
+  function toggleAll(source) {
+    groupData.forEach(item => item.isChecked = source.checked);
+    renderTable();
+  }
+
+  function groupSelected() {
+    if (!isSeqMode) return alert("순번 정렬 적용 체크박스를 켜주세요.");
+    let changed = false;
+    groupData.forEach((item, idx) => {
+        if(item.isChecked && idx > 0) { item.linkToPrev = true; changed = true; item.isChecked = false; }
+    });
+    if(changed) { recalcNumbers(); document.getElementById('chkAll').checked = false; }
+    else alert("선택된 항목이 없거나 첫번째 행입니다.");
+  }
+  function ungroupSelected() {
+    if (!isSeqMode) return alert("순번 정렬 적용 체크박스를 켜주세요.");
+    let changed = false;
+    groupData.forEach(item => {
+        if(item.isChecked) { item.linkToPrev = false; changed = true; item.isChecked = false; }
+    });
+    if(changed) { recalcNumbers(); document.getElementById('chkAll').checked = false; }
+  }
+  function resetOrder() {
+    if(!globalData.length) return;
+    processGroups(); 
+  }
+
+  function addDragEvents(tr) {
+    tr.addEventListener('dragstart', e => {
+        dragSrcIndex = +tr.dataset.index; e.dataTransfer.effectAllowed = 'move'; tr.classList.add('dragging');
+    });
+    tr.addEventListener('dragover', e => { e.preventDefault(); tr.classList.add('drag-over'); });
+    tr.addEventListener('dragleave', () => tr.classList.remove('drag-over'));
+    tr.addEventListener('drop', e => {
+        e.stopPropagation();
+        const dropIndex = +tr.dataset.index;
+        if(dragSrcIndex !== dropIndex) {
+            const moved = groupData.splice(dragSrcIndex, 1)[0];
+            groupData.splice(dropIndex, 0, moved);
+            moved.linkToPrev = false; 
+            if(groupData[dropIndex+1]) groupData[dropIndex+1].linkToPrev = false;
+            recalcNumbers();
+        }
+        return false;
+    });
+    tr.addEventListener('dragend', () => {
+        tr.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+  }
+
+  // 저장 로직
   function createWorkbook() {
     const finalData = JSON.parse(JSON.stringify(globalData));
-    groupData.forEach(group => {
-      group.rows.forEach(rowIdx => {
-        finalData[rowIdx][codeColKey] = group.finalCode;
-        finalData[rowIdx][targetColKey] = group.displayName; 
+    const formatStr = document.getElementById('formatStr').value || "00) ";
+    
+    groupData.forEach(item => {
+      let finalName = item.displayName;
+      
+      // 순번 모드 ON일 때만 이름 앞에 순번 붙임
+      if (isSeqMode) {
+          const seqStr = formatStr.replace('00', String(item.seq).padStart(2, '0'));
+          finalName = `${seqStr}${item.displayName}`; 
+      }
+      
+      item.rows.forEach(rowIdx => {
+        finalData[rowIdx][codeColKey] = item.finalCode;
+        finalData[rowIdx][targetColKey] = finalName; 
       });
     });
     const ws = XLSX.utils.json_to_sheet(finalData);
@@ -638,128 +700,131 @@
     return wb;
   }
 
-  function resetAll() {
-    if (!confirm("작업을 초기화하시겠습니까?")) return;
-    location.reload();
+  async function downloadOverwrite() {
+    if (!globalData.length) return;
+    const wb = createWorkbook();
+    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbOut], {type: "application/octet-stream"});
+    const originalFile = document.getElementById('fileInput').files[0];
+    
+    if (window.showSaveFilePicker) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: originalFile.name,
+                types: [{ description: 'Excel', accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']} }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob); await writable.close();
+            showToast("✅ 저장 완료!");
+        } catch (err) { if(err.name !== 'AbortError') alert("저장 실패: " + err); }
+    } else {
+        saveAs(blob, originalFile.name);
+    }
   }
 
-  function showToast(message) {
-    const toast = document.getElementById("toast");
-    toast.className = "show";
-    toast.innerText = message;
-    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+  function downloadNew() {
+    if (!globalData.length) return;
+    const wb = createWorkbook();
+    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbOut], {type: "application/octet-stream"});
+    const originalFile = document.getElementById('fileInput').files[0];
+    saveAs(blob, originalFile.name); 
+    showToast("✅ 저장 완료!");
   }
 
-  // --- 규칙 관리자 ---
+  // 옵션 보기 모달
+  function openOptModal(idx) {
+    const item = groupData[idx];
+    document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
+    const list = document.getElementById('optListArea');
+    let html = `<table class="opt-table"><thead><tr><th>색상</th><th>사이즈</th><th>재고</th><th>원본명</th></tr></thead><tbody>`;
+    item.rows.forEach(rowIdx => {
+        const r = globalData[rowIdx];
+        html += `<tr>
+            <td style="font-weight:bold; color:#475569;">${r[colorColKey]||'-'}</td>
+            <td>${r[sizeColKey]||'-'}</td>
+            <td>${r[stockColKey]||'-'}</td>
+            <td style="color:#94a3b8;">${r[targetColKey]||''}</td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    list.innerHTML = html;
+    document.getElementById('optModal').style.display = 'flex';
+  }
+  function closeOptModal() { document.getElementById('optModal').style.display = 'none'; }
+
+  // 기타 유틸
+  function resetAll() { if(confirm("초기화하시겠습니까?")) location.reload(); }
+  function showToast(msg) {
+    const t = document.getElementById("toast"); t.innerText = msg; t.className = "show";
+    setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+  }
+
+  // 규칙 관리자 관련
   function openRuleManager() { document.getElementById('ruleModal').style.display = 'flex'; renderRuleList(); }
-  function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length > 0) processGroups(); }
-  function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab === 'code' ? 'tab active' : 'tab'; document.getElementById('tabName').className = tab === 'name' ? 'tab active' : 'tab'; renderRuleList(); }
+  function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length) processGroups(); }
+  function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab==='code'?'tab active':'tab'; document.getElementById('tabName').className = tab==='name'?'tab active':'tab'; renderRuleList(); }
   
   function renderRuleList() {
-    const dbKey = currentTab === 'code' ? DB_KEY_CODE : DB_KEY_NAME;
-    const db = JSON.parse(localStorage.getItem(dbKey) || "{}");
-    const listArea = document.getElementById('ruleListArea');
-    const query = document.getElementById('ruleSearch').value.toLowerCase();
+    const db = JSON.parse(localStorage.getItem(currentTab === 'code' ? DB_KEY_CODE : DB_KEY_NAME) || "{}");
+    const list = document.getElementById('ruleListArea');
+    const q = document.getElementById('ruleSearch').value.toLowerCase();
+    list.innerHTML = "";
     
-    document.getElementById('cntCode').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}")).length;
-    document.getElementById('cntName').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}")).length;
+    document.getElementById('cntCode').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_CODE)||'{}')).length;
+    document.getElementById('cntName').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_NAME)||'{}')).length;
 
-    listArea.innerHTML = "";
-    const keys = Object.keys(db).sort();
-    let hasItem = false;
-
-    keys.forEach(key => {
-      const val = db[key];
-      if (query && !key.toLowerCase().includes(query) && !val.toLowerCase().includes(query)) return;
-      hasItem = true;
-      const div = document.createElement('div');
-      div.className = 'rule-item';
-      div.innerHTML = `
-        <div class="rule-key" title="${key}">${key}</div>
-        <div class="rule-arrow">➜</div>
-        <input type="text" class="rule-val-input" value="${val}" onchange="saveRule('${key}', this.value)">
-        <div class="rule-del" onclick="deleteRule('${key}')">삭제</div>
-      `;
-      listArea.appendChild(div);
+    Object.keys(db).sort().forEach(key => {
+        if(q && !key.toLowerCase().includes(q) && !db[key].toLowerCase().includes(q)) return;
+        const div = document.createElement('div'); div.className = 'rule-item';
+        div.innerHTML = `<div class="rule-key">${key}</div><div class="rule-arrow">➜</div>
+        <input type="text" class="rule-val-input" value="${db[key]}" onchange="saveRule('${key}', this.value)">
+        <div class="rule-del" onclick="deleteRule('${key}')">삭제</div>`;
+        list.appendChild(div);
     });
-    if (!hasItem) listArea.innerHTML = `<div class="empty-state">데이터가 없습니다.</div>`;
   }
-
-  function saveRule(key, newVal) {
-    const dbKey = currentTab === 'code' ? DB_KEY_CODE : DB_KEY_NAME;
-    const db = JSON.parse(localStorage.getItem(dbKey) || "{}");
-    if (newVal.trim()) { db[key] = newVal.trim(); localStorage.setItem(dbKey, JSON.stringify(db)); } else { deleteRule(key); }
+  
+  function saveRule(key, val) {
+    const k = currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k));
+    if(val.trim()) { db[key]=val.trim(); localStorage.setItem(k, JSON.stringify(db)); } else deleteRule(key);
   }
-
   function deleteRule(key) {
-    if(!confirm(`규칙을 삭제하시겠습니까?`)) return;
-    const dbKey = currentTab === 'code' ? DB_KEY_CODE : DB_KEY_NAME;
-    const db = JSON.parse(localStorage.getItem(dbKey) || "{}");
-    delete db[key];
-    localStorage.setItem(dbKey, JSON.stringify(db));
-    renderRuleList();
+    if(!confirm("삭제하시겠습니까?")) return;
+    const k = currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k));
+    delete db[key]; localStorage.setItem(k, JSON.stringify(db)); renderRuleList();
   }
 
-  // --- GitHub 연동 ---
+  // GitHub 연동
   function saveGithubConfig() {
-    const token = document.getElementById('ghToken').value.trim();
-    const repo = document.getElementById('ghRepo').value.trim();
-    const path = document.getElementById('ghPath').value.trim();
-    if(!token || !repo) return alert('토큰과 저장소 정보를 입력하세요.');
-    localStorage.setItem('gh_config_fixer', JSON.stringify({ token, repo, path }));
-    showToast("설정이 저장되었습니다.");
+    const t = document.getElementById('ghToken').value; const r = document.getElementById('ghRepo').value; const p = document.getElementById('ghPath').value;
+    if(!t || !r) return alert("정보를 입력하세요.");
+    localStorage.setItem('gh_config_fixer', JSON.stringify({token:t, repo:r, path:p})); showToast("설정 저장됨");
   }
-
   async function uploadToGithub() {
-    const conf = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
-    if(!conf.token) return alert('토큰 설정이 필요합니다.');
-    
-    const combinedData = {
-      codeDB: JSON.parse(localStorage.getItem(DB_KEY_CODE) || '{}'),
-      nameDB: JSON.parse(localStorage.getItem(DB_KEY_NAME) || '{}')
-    };
-    
-    const content = JSON.stringify(combinedData, null, 2);
-    const contentBase64 = btoa(unescape(encodeURIComponent(content)));
-    const url = `https://api.github.com/repos/${conf.repo}/contents/${conf.path}`;
-
+    const c = JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token) return alert("설정 필요");
+    const data = { codeDB: JSON.parse(localStorage.getItem(DB_KEY_CODE)||'{}'), nameDB: JSON.parse(localStorage.getItem(DB_KEY_NAME)||'{}') };
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
     try {
-      let sha = null;
-      const getRes = await fetch(url, { headers: { 'Authorization': `token ${conf.token}` } });
-      if (getRes.ok) { const json = await getRes.json(); sha = json.sha; }
-
-      const putRes = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${conf.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `Backup ${new Date().toLocaleString()}`, content: contentBase64, sha: sha })
-      });
-
-      if (putRes.ok) showToast("✅ 클라우드 백업 완료!");
-      else alert("업로드 실패: " + (await putRes.json()).message);
-    } catch (e) { alert("오류 발생: " + e); }
+        const res = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {headers:{'Authorization':`token ${c.token}`}});
+        let sha = res.ok ? (await res.json()).sha : null;
+        const put = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {
+            method:'PUT', headers:{'Authorization':`token ${c.token}`},
+            body:JSON.stringify({message:'Backup', content:content, sha:sha})
+        });
+        if(put.ok) showToast("✅ 업로드 완료"); else alert("실패");
+    } catch(e) { alert("오류:"+e); }
   }
-
   async function loadFromGithub() {
-    const conf = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
-    if(!conf.token) return alert('토큰 설정이 필요합니다.');
-    
-    const url = `https://api.github.com/repos/${conf.repo}/contents/${conf.path}`;
+    const c = JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token) return alert("설정 필요");
     try {
-      const res = await fetch(url, { headers: { 'Authorization': `token ${conf.token}`, 'Accept': 'application/vnd.github.v3+json' } });
-      if (!res.ok) throw new Error('파일을 찾을 수 없습니다.');
-      
-      const data = await res.json();
-      const decoded = decodeURIComponent(escape(atob(data.content)));
-      const parsed = JSON.parse(decoded);
-
-      if (parsed.codeDB) localStorage.setItem(DB_KEY_CODE, JSON.stringify(parsed.codeDB));
-      if (parsed.nameDB) localStorage.setItem(DB_KEY_NAME, JSON.stringify(parsed.nameDB));
-      
-      showToast("✅ 클라우드 데이터 복원 완료!");
-      renderRuleList();
-    } catch (e) { alert("불러오기 실패: " + e); }
+        const res = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {headers:{'Authorization':`token ${c.token}`, 'Accept':'application/vnd.github.v3+json'}});
+        if(!res.ok) throw new Error("파일 없음");
+        const d = JSON.parse(decodeURIComponent(escape(atob((await res.json()).content))));
+        if(d.codeDB) localStorage.setItem(DB_KEY_CODE, JSON.stringify(d.codeDB));
+        if(d.nameDB) localStorage.setItem(DB_KEY_NAME, JSON.stringify(d.nameDB));
+        showToast("✅ 다운로드 완료"); renderRuleList();
+    } catch(e) { alert("실패:"+e); }
   }
 </script>
-
 </body>
 </html>
