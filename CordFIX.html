@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드 스마트 수정기 (키보드+수정)</title>
+  <title>관리코드 스마트 수정기 (규칙 강제 적용)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -17,7 +17,7 @@
       margin: 0; padding: 20px; display: flex; justify-content: center;
     }
     .container {
-      width: 1600px; max-width: 98vw; background: var(--card); border-radius: 16px;
+      width: 1500px; max-width: 98vw; background: var(--card); border-radius: 16px;
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 92vh;
     }
     
@@ -78,17 +78,16 @@
     tbody td { padding: 10px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
     tbody tr:hover { background: #f8fafc; }
 
-    /* 입력 그룹 스타일 */
+    /* 입력 그룹 스타일 (버튼 + 인풋) */
     .code-input-group { display: flex; gap: 6px; width: 100%; align-items: center; }
     
-    /* 공통 인풋 스타일 (상품명, 코드) */
+    /* 공통 인풋 스타일 */
     .common-input {
       width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
       font-family: 'Pretendard', sans-serif; font-size: 13px; transition: 0.2s; box-sizing: border-box;
     }
     .common-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: #fff; z-index: 1; position: relative; }
     
-    /* 코드 입력창 특화 */
     .code-input { font-family: 'Monaco', monospace; }
     .code-input.empty { border-color: var(--danger); background: #fef2f2; }
     .code-input.short { border-color: var(--warning); background: #fffbeb; }
@@ -120,9 +119,9 @@
 
     /* 컬럼 너비 최적화 */
     .col-status { width: 90px; text-align: center; }
-    .col-name   { width: 30%; } /* 상품명 수정 가능하게 넓힘 */
+    .col-name   { width: 25%; } 
     .col-old    { width: 10%; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .col-code   { width: 35%; } 
+    .col-code   { width: 40%; }
     .col-info   { width: 100px; text-align: center; }
 
     /* --- 모달 --- */
@@ -197,7 +196,7 @@
   <div class="header">
     <div>
       <h1>🛠️ 관리코드 스마트 수정기</h1>
-      <p>키보드 이동(Enter/화살표) + 상품명 수정 + 하이브리드 자동완성</p>
+      <p>하이브리드 자동완성 + 1번상품 제외 + 기존코드 덮어쓰기 적용</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙 관리 / 동기화</button>
@@ -297,9 +296,9 @@
   let groupData = []; 
   let targetColKey = "";
   let codeColKey = "";
-  let colorColKey = ""; // 색상 컬럼
-  let sizeColKey = "";  // 사이즈 컬럼
-  let stockColKey = ""; // 재고 컬럼
+  let colorColKey = ""; 
+  let sizeColKey = ""; 
+  let stockColKey = ""; 
   let currentTab = 'code'; 
 
   // GitHub 설정 로드
@@ -325,7 +324,6 @@
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
       const keys = Object.keys(globalData[0]);
-      // 컬럼 자동 인식
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
       
@@ -383,7 +381,10 @@
       if (val.originalCode && dbCode[val.originalCode]) {
         finalCode = dbCode[val.originalCode];
         status = "auto"; matchType = "code"; codeMatch++;
-      } else if (!val.originalCode && dbName[val.cleanName]) { 
+      } 
+      // [수정된 로직] 기존 코드가 있어도, 이름 매칭 규칙이 있으면 덮어씀
+      // 단, 1번 상품은 제외
+      else if (dbName[val.cleanName]) { 
         if (!isProductOne) {
             finalCode = dbName[val.cleanName];
             status = "auto"; matchType = "name"; nameMatch++;
@@ -450,52 +451,38 @@
     document.getElementById('dnBtnNew').disabled = false;
   }
 
-  // [신규] 키보드 네비게이션 (엑셀 스타일)
+  // 키보드 네비게이션
   function handleKeyDown(e, idx, type) {
-    // type: 'name' or 'code'
     const rows = groupData.length;
     let nextIdx = idx;
 
     if (e.key === 'Enter' || e.key === 'ArrowDown') {
         e.preventDefault();
-        if(e.shiftKey) nextIdx = idx - 1; // Shift+Enter는 위로
+        if(e.shiftKey) nextIdx = idx - 1; 
         else nextIdx = idx + 1;
     } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         nextIdx = idx - 1;
     }
 
-    // 범위 체크
     if (nextIdx >= 0 && nextIdx < rows) {
-        // 다음 요소 찾아서 포커스
         const trs = document.getElementById('tbody').children;
         let targetInput;
-        
         if (type === 'name') {
             targetInput = trs[nextIdx].querySelector('.name-input');
         } else {
-            // code 인풋은 .code-input 클래스를 가짐 (상태별 클래스도 있어서 쿼리 주의)
-            // common-input 클래스 사용
             const inputs = trs[nextIdx].querySelectorAll('.common-input');
-            // [0]은 name, [1]은 code (DOM 구조상)
             targetInput = inputs[1]; 
         }
-        
-        if (targetInput) {
-            targetInput.focus();
-            // 텍스트 전체 선택 (엑셀처럼)
-            targetInput.select();
-        }
+        if (targetInput) { targetInput.focus(); targetInput.select(); }
     }
   }
 
-  // [신규] 상품명 수정 업데이트
   function updateName(idx, newName) {
     groupData[idx].displayName = newName;
-    // 여기서는 원본 데이터를 수정하지 않고, 다운로드 시점에 일괄 반영합니다.
   }
 
-  // --- [신규] 옵션 보기 모달 ---
+  // --- 옵션 보기 모달 ---
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 상세 옵션 (${item.rows.length}개)`;
@@ -633,10 +620,8 @@
     const finalData = JSON.parse(JSON.stringify(globalData));
     groupData.forEach(group => {
       group.rows.forEach(rowIdx => {
-        // 관리코드 업데이트
         finalData[rowIdx][codeColKey] = group.finalCode;
-        // [중요] 상품명(제품선택) 업데이트 (사용자가 수정했을 수 있음)
-        finalData[rowIdx][targetColKey] = group.displayName;
+        finalData[rowIdx][targetColKey] = group.displayName; // 상품명 수정 반영
       });
     });
     const ws = XLSX.utils.json_to_sheet(finalData);
