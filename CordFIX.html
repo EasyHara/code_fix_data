@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (스마트 그룹핑)</title>
+  <title>옵션 & 코드 마스터 (입력충돌 해결)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -93,7 +93,7 @@
     }
     tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: var(--text); }
     
-    /* 행 스타일 (그룹화) */
+    /* 행 스타일 */
     tr { transition: background 0.1s; }
     tr:hover { background: #e2e8f0 !important; }
     
@@ -200,7 +200,7 @@
   <div class="header">
     <div>
       <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
-      <p>스마트 상품명 비교 + 입력 최적화 + 순번제어 + 클라우드</p>
+      <p>입력 버그 완벽 수정 + 드래그/입력 충돌 방지 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -380,18 +380,6 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // [핵심] 상품명 정규화 (색상, 특수문자 제거)
-  function getCoreName(str) {
-      let s = str.toUpperCase();
-      // 괄호 내용 제거 (색상 등)
-      s = s.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
-      // 슬래시/대시 뒤 제거
-      s = s.split('/')[0];
-      // 특수문자, 공백 제거 (한글, 영문, 숫자만 남김)
-      s = s.replace(/[^A-Z0-9가-힣]/g, '');
-      return s;
-  }
-
   function processGroups() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
@@ -408,7 +396,6 @@
       const cleanName = rawName.replace(cleanNameRegex, "").trim();
       const codeVal = String(row[codeColKey] || "").trim(); 
       
-      // 순번 추출
       const numMatch = rawName.match(/^[\s\[\(No\.\-]*(\d+)/i);
       const originalSeq = numMatch ? parseInt(numMatch[1], 10) : null;
 
@@ -472,30 +459,19 @@
       });
     });
 
-    // [핵심] 자동 묶기 로직 (스마트 비교)
+    // 자동 묶기
     for (let i = 1; i < groupData.length; i++) {
         const prev = groupData[i-1];
         const curr = groupData[i];
         
-        // 1. 관리코드가 같으면 무조건 묶음
         const sameCode = (curr.originalCode && prev.originalCode && curr.originalCode === prev.originalCode);
-        
-        // 2. 코드가 달라도, "핵심 상품명"이 같으면 묶음 (색상 차이 무시)
-        // 단, 코드가 둘 다 존재하는데 서로 다르면(예: BK vs WT) 실수일 수도 있지만, 
-        // 사용자는 "같은 상품"으로 묶이길 원함.
-        const prevCore = getCoreName(prev.cleanName);
-        const currCore = getCoreName(curr.cleanName);
-        const sameBaseName = (prevCore === currCore && prevCore.length > 1); // 최소 2글자 이상
-
-        // 3. 원본 순번이 같으면 묶음 (가장 강력한 힌트)
         const sameSeq = (curr.originalSeq !== null && prev.originalSeq !== null && curr.originalSeq === prev.originalSeq);
 
-        if (sameCode || sameBaseName || sameSeq) {
+        if (sameCode || sameSeq) {
             curr.linkToPrev = true;
         }
     }
     
-    // 서식 자동 감지
     if (groupData.length > 0) {
        const firstItem = groupData[0];
        if (firstItem.originalSeq === 1) {
@@ -681,6 +657,7 @@
         <td class="col-status">${badge}</td>
         <td class="col-name">
           <input type="text" class="common-input name-input" value="${item.displayName}" 
+            onmousedown="event.stopPropagation()" 
             oninput="updateName(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'name')">
         </td>
         <td class="col-old" title="${item.originalCode}">${item.originalCode || '-'}</td>
@@ -688,6 +665,7 @@
           <div class="code-input-group">
             <button class="${btnClass}" onclick="toggleExclude(${i})" title="규칙 저장 여부">${btnText}</button>
             <input type="text" class="common-input ${inputClass}" value="${item.finalCode}" 
+              onmousedown="event.stopPropagation()"
               oninput="updateCode(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'code')">
           </div>
         </td>
@@ -706,7 +684,10 @@
   }
 
   function updateName(idx, val) { groupData[idx].displayName = val; }
-  function updateCode(idx, val) { groupData[idx].finalCode = val; }
+
+  function updateCode(idx, val) {
+    groupData[idx].finalCode = val; 
+  }
 
   function saveAllRules() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
