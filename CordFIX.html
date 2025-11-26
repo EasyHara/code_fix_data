@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (최종 완결)</title>
+  <title>옵션 & 코드 마스터 (스마트 파싱)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -193,8 +193,8 @@
 <div class="container">
   <div class="header">
     <div>
-      <h1>🔢 옵션 & 코드 마스터 (최종 완결)</h1>
-      <p>입력 최적화(버그해결) + 색상분리 + 순번제어 + 클라우드</p>
+      <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
+      <p>입력 최적화 + 색상 자동분리 + 순번제어 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -350,6 +350,7 @@
 
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
+      // 컬럼 자동 인식
       const keys = Object.keys(globalData[0]);
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
@@ -375,6 +376,7 @@
 
     const map = new Map();
 
+    // 1차 그룹화: 상품명 + 기존코드
     globalData.forEach((row, idx) => {
       const rawName = String(row[targetColKey] || "");
       const cleanName = rawName.replace(cleanNameRegex, "").trim();
@@ -395,6 +397,7 @@
       map.get(uniqueGroupKey).rows.push(idx);
     });
 
+    // 2차 분석
     map.forEach((val, uniqueGroupKey) => {
       let finalCode = val.originalCode;
       let status = "ok";
@@ -440,16 +443,36 @@
     document.getElementById('btnSave2').disabled = false;
   }
 
+  // [신규] 공통: 행 파싱 함수 (합쳐진 색상/사이즈 분리)
+  function parseRowInfo(rowIdx) {
+      const row = globalData[rowIdx];
+      let color = colorColKey ? String(row[colorColKey] || "").trim() : "";
+      let size = sizeColKey ? String(row[sizeColKey] || "").trim() : "";
+      const stock = stockColKey ? String(row[stockColKey] || "").trim() : "";
+      const name = String(row[targetColKey] || "").trim();
+
+      // [핵심] 사이즈에 '색상 / 사이즈'가 같이 있는 경우 분리
+      if (!color && size.includes('/')) {
+          const parts = size.split('/').map(s => s.trim());
+          if (parts.length >= 2) {
+              // "블랙 / 95" -> 색상:블랙, 사이즈:95
+              color = parts[0];
+              size = parts.slice(1).join(' / ');
+          }
+      }
+      return { color, size, stock, name };
+  }
+
   // [신규] 색상별 분리 (Split)
   function splitByColor(idx) {
-      if (!colorColKey) return alert("색상 컬럼을 찾을 수 없습니다.");
-      
       const targetGroup = groupData[idx];
       const rows = targetGroup.rows;
       
+      // 색상별로 행 분류 (parseRowInfo 사용)
       const colorMap = {};
       rows.forEach(rowIdx => {
-          const color = String(globalData[rowIdx][colorColKey] || "기타").trim();
+          const info = parseRowInfo(rowIdx);
+          const color = info.color || "기타";
           if(!colorMap[color]) colorMap[color] = [];
           colorMap[color].push(rowIdx);
       });
@@ -582,9 +605,9 @@
 
   function updateName(idx, val) { groupData[idx].displayName = val; }
 
-  // [핵심] 입력 시에는 오직 메모리상의 데이터만 변경 (DB 저장 X) -> 버그 원천 차단
+  // [핵심] 입력 시에는 오직 메모리상의 데이터만 변경 (DB 저장 X)
   function updateCode(idx, val) {
-    groupData[idx].finalCode = val;
+    groupData[idx].finalCode = val; 
   }
 
   // [신규] 일괄 저장 함수 (파일 저장 버튼 누를 때 실행)
@@ -601,7 +624,6 @@
             if (item.originalCode && item.originalCode !== cleanVal) {
                 dbCode[item.originalCode] = cleanVal;
             }
-            // 이름 규칙 저장 (색상 분리된 이름도 저장됨)
             dbName[item.cleanName] = cleanVal;
         } else {
             if (item.originalCode) delete dbCode[item.originalCode];
@@ -701,6 +723,7 @@
     });
   }
 
+  // 저장 로직 (이때 DB 저장도 수행)
   function createWorkbook() {
     const finalData = JSON.parse(JSON.stringify(globalData));
     const formatStr = document.getElementById('formatStr').value || "00) ";
@@ -723,11 +746,10 @@
     return wb;
   }
 
-  // [중요] 저장 버튼 누를 때만 규칙 저장 실행
   async function downloadOverwrite() {
     if (!globalData.length) return;
     
-    saveAllRules(); // 규칙 저장
+    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
 
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -753,7 +775,7 @@
   function downloadNew() {
     if (!globalData.length) return;
 
-    saveAllRules(); // 규칙 저장
+    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
 
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -764,19 +786,19 @@
     if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
   }
 
-  // 옵션 보기 모달
+  // 옵션 보기 모달 (스마트 파싱 적용)
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
     const list = document.getElementById('optListArea');
     let html = `<table class="opt-table"><thead><tr><th>색상</th><th>사이즈</th><th>재고</th><th>원본명</th></tr></thead><tbody>`;
     item.rows.forEach(rowIdx => {
-        const r = globalData[rowIdx];
+        const info = parseRowInfo(rowIdx); // 스마트 파싱 사용
         html += `<tr>
-            <td style="font-weight:bold; color:#475569;">${r[colorColKey]||'-'}</td>
-            <td>${r[sizeColKey]||'-'}</td>
-            <td>${r[stockColKey]||'-'}</td>
-            <td style="color:#94a3b8;">${r[targetColKey]||''}</td>
+            <td style="font-weight:bold; color:#475569;">${info.color||'-'}</td>
+            <td>${info.size||'-'}</td>
+            <td>${info.stock||'-'}</td>
+            <td style="color:#94a3b8;">${info.name||''}</td>
         </tr>`;
     });
     html += `</tbody></table>`;
