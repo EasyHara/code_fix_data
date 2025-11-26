@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (버그수정판)</title>
+  <title>옵션 & 코드 마스터 (버그수정)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -206,8 +206,8 @@
     
     <div style="flex:1;"></div>
     
-    <button class="btn btn-overwrite" onclick="downloadOverwrite()" disabled id="btnSave1" title="엑셀파일을 닫고 누르세요">💾 덮어쓰기 저장</button>
-    <button class="btn btn-newfile" onclick="downloadNew()" disabled id="btnSave2">📥 새 파일로 저장</button>
+    <button class="btn btn-dark" onclick="downloadOverwrite()" disabled id="btnSave1" title="엑셀파일을 닫고 누르세요">💾 덮어쓰기 저장</button>
+    <button class="btn btn-success" onclick="downloadNew()" disabled id="btnSave2">📥 새 파일로 저장</button>
   </div>
 
   <div class="toolbar">
@@ -308,9 +308,11 @@
 <div id="toast"></div>
 
 <script>
+  // 저장소 키
   const DB_KEY_CODE = "easyHara_db_by_code_v1"; 
   const DB_KEY_NAME = "easyHara_db_by_name_v1"; 
 
+  // 전역 변수
   let globalData = []; 
   let groupData = [];  
   let targetColKey = "", codeColKey = "";
@@ -320,6 +322,7 @@
   let dragSrcIndex = null;
   let isSeqMode = false; 
 
+  // 초기화
   document.addEventListener('DOMContentLoaded', () => {
     const ghConfig = JSON.parse(localStorage.getItem('gh_config_fixer') || '{}');
     if(ghConfig.token) document.getElementById('ghToken').value = ghConfig.token;
@@ -327,6 +330,7 @@
     if(ghConfig.path) document.getElementById('ghPath').value = ghConfig.path;
   });
 
+  // 1. 파일 로드
   function handleFile(input) {
     const file = input.files[0];
     if (!file) return;
@@ -341,6 +345,7 @@
 
       if (globalData.length === 0) { alert("데이터가 없습니다."); return; }
 
+      // 컬럼 자동 인식
       const keys = Object.keys(globalData[0]);
       targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
@@ -356,6 +361,7 @@
     reader.readAsArrayBuffer(file);
   }
 
+  // 2. 데이터 그룹화 및 로직 적용
   function processGroups() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
@@ -366,6 +372,7 @@
 
     const map = new Map();
 
+    // 1차 그룹화: 상품명 + 기존코드
     globalData.forEach((row, idx) => {
       const rawName = String(row[targetColKey] || "");
       const cleanName = rawName.replace(cleanNameRegex, "").trim();
@@ -386,6 +393,7 @@
       map.get(uniqueGroupKey).rows.push(idx);
     });
 
+    // 2차 분석
     map.forEach((val, uniqueGroupKey) => {
       let finalCode = val.originalCode;
       let status = "ok";
@@ -431,6 +439,7 @@
     document.getElementById('btnSave2').disabled = false;
   }
 
+  // 순번 모드 토글
   function toggleSeqMode(forceVal) {
     const chk = document.getElementById('useSeq');
     if (forceVal !== undefined) chk.checked = forceVal;
@@ -448,6 +457,7 @@
     recalcNumbers();
   }
 
+  // 순번 재계산
   function recalcNumbers() {
     let currentSeq = 0;
     groupData.forEach((item, i) => {
@@ -461,6 +471,7 @@
     renderTable();
   }
 
+  // 테이블 렌더링
   function renderTable() {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = "";
@@ -503,7 +514,7 @@
           seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
           linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
       } else {
-          seqText = "-"; 
+          seqText = "-"; // 모드 꺼지면 순번 안보임
       }
 
       tr.innerHTML = `
@@ -513,12 +524,12 @@
         <td class="col-status">${badge}</td>
         <td class="col-name">
           <input type="text" class="common-input name-input" value="${item.displayName}" 
-            onchange="updateName(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'name')">
+            oninput="updateName(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'name')">
         </td>
         <td class="col-old" title="${item.originalCode}">${item.originalCode || '-'}</td>
         <td class="col-code">
           <div class="code-input-group">
-            <button class="${btnClass}" onclick="toggleExclude(${i})" title="규칙 저장 여부">${btnText}</button>
+            <button class="${btnClass}" onclick="toggleExclude(${i})" title="자동완성 규칙 저장 여부">${btnText}</button>
             <input type="text" class="common-input ${inputClass}" value="${item.finalCode}" 
               oninput="updateCode(${i}, this.value)" onkeydown="handleKeyDown(event, ${i}, 'code')">
           </div>
@@ -536,11 +547,14 @@
     tbody.appendChild(fragment);
   }
 
+  // --- 로직 함수들 ---
+
   function updateName(idx, val) { groupData[idx].displayName = val; }
 
+  // [수정] 입력 시에는 그대로 유지, 저장시에만 trim
   function updateCode(idx, val) {
     groupData[idx].finalCode = val; 
-    saveToDB(idx, val.trim());      
+    saveToDB(idx, val.trim());
   }
 
   function saveToDB(idx, cleanVal) {
@@ -564,7 +578,12 @@
   function toggleExclude(idx) {
     groupData[idx].excludeSave = !groupData[idx].excludeSave;
     saveToDB(idx, groupData[idx].finalCode.trim());
-    renderTable();
+    
+    // 화면 전체 갱신 대신 버튼만 바꿈 (입력 끊김 방지)
+    const tr = document.querySelector(`input[oninput*="updateCode(${idx}"]`).closest('tr');
+    const btn = tr.querySelector('.btn-no-match');
+    btn.className = groupData[idx].excludeSave ? "btn-no-match active" : "btn-no-match";
+    btn.textContent = groupData[idx].excludeSave ? "🔕 매칭X" : "🔔 매칭O";
   }
 
   function handleKeyDown(e, idx, type) {
@@ -647,6 +666,7 @@
     });
   }
 
+  // 저장 로직
   function createWorkbook() {
     const finalData = JSON.parse(JSON.stringify(globalData));
     const formatStr = document.getElementById('formatStr').value || "00) ";
@@ -659,7 +679,7 @@
       }
       
       item.rows.forEach(rowIdx => {
-        finalData[rowIdx][codeColKey] = item.finalCode.trim();
+        finalData[rowIdx][codeColKey] = item.finalCode.trim(); // 저장할땐 trim
         finalData[rowIdx][targetColKey] = finalName; 
       });
     });
@@ -701,6 +721,7 @@
     showToast("✅ 저장 완료!");
   }
 
+  // 옵션 보기 모달
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
@@ -727,6 +748,7 @@
     setTimeout(() => t.className = t.className.replace("show", ""), 3000);
   }
 
+  // 규칙 관리자 관련
   function openRuleManager() { document.getElementById('ruleModal').style.display = 'flex'; renderRuleList(); }
   function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length) processGroups(); }
   function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab==='code'?'tab active':'tab'; document.getElementById('tabName').className = tab==='name'?'tab active':'tab'; renderRuleList(); }
@@ -760,6 +782,7 @@
     delete db[key]; localStorage.setItem(k, JSON.stringify(db)); renderRuleList();
   }
 
+  // GitHub 연동
   function saveGithubConfig() {
     const t = document.getElementById('ghToken').value; const r = document.getElementById('ghRepo').value; const p = document.getElementById('ghPath').value;
     if(!t || !r) return alert("정보를 입력하세요.");
