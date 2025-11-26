@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (단종 예외처리)</title>
+  <title>옵션 & 코드 마스터 (순번감지)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -13,6 +13,7 @@
       --text: #1e293b; --text-sub: #64748b;
       --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --purple: #8b5cf6;
       --linked-bg: #eff6ff; --linked-border: #3b82f6;
+      --group-even-bg: #f8fafc; --group-border: #cbd5e1;
     }
     body {
       font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text);
@@ -88,16 +89,20 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     thead th {
       position: sticky; top: 0; background: #f8fafc; z-index: 10; padding: 10px 12px;
-      text-align: left; color: var(--text-sub); font-weight: 600; border-bottom: 1px solid var(--border);
+      text-align: left; color: var(--text-sub); font-weight: 600; border-bottom: 2px solid #e2e8f0;
     }
     tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: var(--text); }
     
     /* 행 스타일 */
     tr { transition: background 0.1s; }
-    tr:hover { background: #f8fafc; }
-    tr.linked { background-color: var(--linked-bg); }
+    tr:hover { background: #e2e8f0 !important; }
+    
+    tr.group-start td { border-top: 2px solid var(--group-border); }
+    tr.group-even { background-color: var(--group-even-bg); }
+    tr.group-odd { background-color: #fff; }
+    tr.linked { background-color: var(--linked-bg) !important; }
     tr.linked td:first-child { box-shadow: inset 3px 0 0 var(--linked-border); }
-    tr.dragging { opacity: 0.5; background: #e0e7ff; }
+    tr.dragging { opacity: 0.5; background: #e0e7ff !important; }
     tr.drag-over { border-top: 2px solid var(--primary); }
 
     /* 인풋 스타일 */
@@ -130,6 +135,7 @@
     .badge-ok { background: #f1f5f9; color: var(--text-sub); }
     .badge-code { background: #ede9fe; color: var(--purple); }
     .badge-name { background: #dcfce7; color: var(--success); }
+    .badge-diff { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; } /* 순번 오류 배지 */
 
     .btn-view-opt {
       font-size: 11px; padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1;
@@ -147,7 +153,7 @@
     /* 컬럼 너비 */
     .col-chk    { width: 30px; text-align: center; }
     .col-drag   { width: 30px; text-align: center; cursor: grab; color: #cbd5e1; }
-    .col-seq    { width: 60px; text-align: center; font-weight: 700; color: #64748b; }
+    .col-seq    { width: 80px; text-align: center; font-weight: 700; color: #64748b; }
     .col-status { width: 80px; text-align: center; }
     .col-name   { width: 25%; }
     .col-old    { width: 10%; color: #94a3b8; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -194,7 +200,7 @@
   <div class="header">
     <div>
       <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
-      <p>입력 최적화(끊김없음) + 색상분리 + 순번제어 + '단종'예외처리</p>
+      <p>순번 자동감지 + 오류 시각화 + 입력 최적화 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -374,11 +380,15 @@
 
     const map = new Map();
 
-    // 1차 그룹화
+    // 1차 그룹화: 상품명 + 기존코드
     globalData.forEach((row, idx) => {
       const rawName = String(row[targetColKey] || "");
       const cleanName = rawName.replace(cleanNameRegex, "").trim();
       const codeVal = String(row[codeColKey] || "").trim(); 
+      
+      // 순번 추출 (원본 번호 감지용)
+      const numMatch = rawName.match(/^[\s\[\(No\.\-]*(\d+)/i);
+      const originalSeq = numMatch ? parseInt(numMatch[1], 10) : null;
 
       if (!cleanName) return;
 
@@ -389,6 +399,7 @@
           cleanName: cleanName,
           rawName: rawName, 
           originalCode: codeVal, 
+          originalSeq: originalSeq,
           rows: []
         });
       }
@@ -405,13 +416,12 @@
       const isProductOne = /^[\s\[\(]*(?:no\.?)?0*1[\s\]\)\.\-]/i.test(val.rawName);
       if (isProductOne) { excludeSave = true; }
 
-      // [수정] '단종' 예외 처리: 코드에 '단종'만 있으면 공란으로 간주, 저장도 제외
+      // '단종'은 공란 처리
       if (val.originalCode === '단종') {
-          finalCode = ""; // 공란으로 초기화
+          finalCode = ""; 
           status = "empty";
-          excludeSave = true; // 저장 제외
+          excludeSave = true; 
       } else {
-          // 일반 로직
           if (val.originalCode && dbCode[val.originalCode]) {
             finalCode = dbCode[val.originalCode];
             status = "auto"; matchType = "code"; codeMatch++;
@@ -431,6 +441,7 @@
         rawName: val.rawName,     
         displayName: val.rawName, 
         originalCode: val.originalCode,
+        originalSeq: val.originalSeq, // 원본 순번 저장
         finalCode: finalCode, 
         rows: val.rows, 
         status: status, matchType: matchType, excludeSave: excludeSave,
@@ -439,6 +450,32 @@
         isChecked: false
       });
     });
+
+    // 자동 묶기 (코드 같으면)
+    for (let i = 1; i < groupData.length; i++) {
+        const prev = groupData[i-1];
+        const curr = groupData[i];
+        if (curr.originalCode && prev.originalCode && curr.originalCode === prev.originalCode) {
+            curr.linkToPrev = true;
+        }
+    }
+    
+    // [신규] 서식 자동 감지
+    if (groupData.length > 0) {
+       const firstItem = groupData[0];
+       // 1번 상품이면 그 서식을 따름
+       if (firstItem.originalSeq === 1) {
+           const raw = firstItem.rawName;
+           let detectedFormat = "00) ";
+           
+           if (raw.startsWith("1.")) detectedFormat = "0. ";
+           else if (raw.startsWith("(01)")) detectedFormat = "(00) ";
+           else if (raw.startsWith("[01]")) detectedFormat = "[00] ";
+           else if (raw.startsWith("01)")) detectedFormat = "00) "; // 기본
+           
+           document.getElementById('formatStr').value = detectedFormat;
+       }
+    }
 
     toggleSeqMode(false); 
     
@@ -449,7 +486,6 @@
     document.getElementById('btnSave2').disabled = false;
   }
 
-  // 공통: 행 파싱 함수
   function parseRowInfo(rowIdx) {
       const row = globalData[rowIdx];
       let color = colorColKey ? String(row[colorColKey] || "").trim() : "";
@@ -467,7 +503,6 @@
       return { color, size, stock, name };
   }
 
-  // [신규] 색상별 분리 (Split)
   function splitByColor(idx) {
       const targetGroup = groupData[idx];
       const rows = targetGroup.rows;
@@ -548,6 +583,8 @@
     document.getElementById('totalCount').innerText = groupData.length;
 
     const fragment = document.createDocumentFragment();
+    let lastSeq = null;
+    let groupIndex = 0;
 
     visibleItems.forEach((item) => {
       const i = item.orgIdx;
@@ -560,6 +597,16 @@
       
       tr.dataset.index = i;
       if(item.linkToPrev) tr.classList.add('linked');
+
+      const isNewGroup = item.seq !== lastSeq;
+      if (isNewGroup) {
+          lastSeq = item.seq;
+          groupIndex++;
+          tr.classList.add('group-start');
+      }
+      if (!item.linkToPrev) {
+          tr.classList.add(groupIndex % 2 === 0 ? 'group-even' : 'group-odd');
+      }
 
       let badge = "", inputClass = "code-input";
       if (item.matchType === 'code') { badge = `<span class="badge badge-code">⚡ 코드</span>`; inputClass += " auto-code"; }
@@ -577,9 +624,15 @@
 
       if (isSeqMode) {
           seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
-          linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
+          linkIcon = (i > 0 && item.linkToPrev && isSeqMode) ? `<span class="link-icon active">↳</span>` : ``;
+          
+          // [신규] 순번 오류 감지
+          if (item.originalSeq !== null && item.originalSeq !== item.seq) {
+              seqText += ` <span class="badge badge-diff" title="원래 ${item.originalSeq}번">⚡${item.originalSeq}</span>`;
+          }
+          
           if (item.linkToPrev) {
-             seqDisplay = `<span style="color:#cbd5e1;">${linkIcon}${seqText}</span>`;
+             seqDisplay = `<span style="color:#cbd5e1;">${linkIcon}</span>`;
           } else {
              seqDisplay = `${linkIcon}${seqText}`;
           }
@@ -626,21 +679,16 @@
   }
 
   function updateName(idx, val) { groupData[idx].displayName = val; }
+  function updateCode(idx, val) { groupData[idx].finalCode = val; }
 
-  // [핵심] 입력 시에는 오직 메모리상의 데이터만 변경 (DB 저장 X)
-  function updateCode(idx, val) {
-    groupData[idx].finalCode = val; 
-  }
-
-  // [신규] 일괄 저장 함수 (파일 저장 버튼 누를 때 실행)
+  // 일괄 저장 함수 (파일 저장 버튼 누를 때 실행)
   function saveAllRules() {
     const dbCode = JSON.parse(localStorage.getItem(DB_KEY_CODE) || "{}");
     const dbName = JSON.parse(localStorage.getItem(DB_KEY_NAME) || "{}");
 
     groupData.forEach(item => {
         if (item.excludeSave) return; 
-
-        const cleanVal = item.finalCode.trim(); // 저장할 땐 공백 제거
+        const cleanVal = item.finalCode.trim(); 
 
         if (cleanVal) {
             if (item.originalCode && item.originalCode !== cleanVal) {
@@ -770,9 +818,7 @@
 
   async function downloadOverwrite() {
     if (!globalData.length) return;
-    
-    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
-
+    saveAllRules(); 
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbOut], {type: "application/octet-stream"});
@@ -796,9 +842,7 @@
 
   function downloadNew() {
     if (!globalData.length) return;
-
-    saveAllRules(); // 저장 버튼 누를 때 규칙 일괄 저장
-
+    saveAllRules();
     const wb = createWorkbook();
     const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbOut], {type: "application/octet-stream"});
@@ -808,7 +852,6 @@
     if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
   }
 
-  // 옵션 보기 모달
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
@@ -835,71 +878,29 @@
     setTimeout(() => t.className = t.className.replace("show", ""), 3000);
   }
 
-  // 규칙 관리자 관련
+  // 규칙 관리자 및 GitHub 연동 코드 (기존과 동일)
   function openRuleManager() { document.getElementById('ruleModal').style.display = 'flex'; renderRuleList(); }
   function closeRuleManager() { document.getElementById('ruleModal').style.display = 'none'; if(globalData.length) processGroups(); }
   function switchTab(tab) { currentTab = tab; document.getElementById('tabCode').className = tab==='code'?'tab active':'tab'; document.getElementById('tabName').className = tab==='name'?'tab active':'tab'; renderRuleList(); }
-  
   function renderRuleList() {
     const db = JSON.parse(localStorage.getItem(currentTab === 'code' ? DB_KEY_CODE : DB_KEY_NAME) || "{}");
     const list = document.getElementById('ruleListArea');
     const q = document.getElementById('ruleSearch').value.toLowerCase();
     list.innerHTML = "";
-    
     document.getElementById('cntCode').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_CODE)||'{}')).length;
     document.getElementById('cntName').innerText = Object.keys(JSON.parse(localStorage.getItem(DB_KEY_NAME)||'{}')).length;
-
     Object.keys(db).sort().forEach(key => {
         if(q && !key.toLowerCase().includes(q) && !db[key].toLowerCase().includes(q)) return;
         const div = document.createElement('div'); div.className = 'rule-item';
-        div.innerHTML = `<div class="rule-key">${key}</div><div class="rule-arrow">➜</div>
-        <input type="text" class="rule-val-input" value="${db[key]}" onchange="saveRule('${key}', this.value)">
-        <div class="rule-del" onclick="deleteRule('${key}')">삭제</div>`;
+        div.innerHTML = `<div class="rule-key">${key}</div><div class="rule-arrow">➜</div><input type="text" class="rule-val-input" value="${db[key]}" onchange="saveRule('${key}', this.value)"><div class="rule-del" onclick="deleteRule('${key}')">삭제</div>`;
         list.appendChild(div);
     });
   }
-  
-  function saveRule(key, val) {
-    const k = currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k));
-    if(val.trim()) { db[key]=val.trim(); localStorage.setItem(k, JSON.stringify(db)); } else deleteRule(key);
-  }
-  function deleteRule(key) {
-    if(!confirm("삭제하시겠습니까?")) return;
-    const k = currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k));
-    delete db[key]; localStorage.setItem(k, JSON.stringify(db)); renderRuleList();
-  }
-
-  // GitHub 연동
-  function saveGithubConfig() {
-    const t = document.getElementById('ghToken').value; const r = document.getElementById('ghRepo').value; const p = document.getElementById('ghPath').value;
-    if(!t || !r) return alert("정보를 입력하세요.");
-    localStorage.setItem('gh_config_fixer', JSON.stringify({token:t, repo:r, path:p})); showToast("설정 저장됨");
-  }
-  async function uploadToGithub() {
-    const c = JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token) return alert("설정 필요");
-    const data = { codeDB: JSON.parse(localStorage.getItem(DB_KEY_CODE)||'{}'), nameDB: JSON.parse(localStorage.getItem(DB_KEY_NAME)||'{}') };
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-    try {
-        const res = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {headers:{'Authorization':`token ${c.token}`}});
-        let sha = res.ok ? (await res.json()).sha : null;
-        const put = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {
-            method:'PUT', headers:{'Authorization':`token ${c.token}`},
-            body:JSON.stringify({message:'Backup', content:content, sha:sha})
-        });
-        if(put.ok) showToast("✅ 업로드 완료"); else alert("실패");
-    } catch(e) { alert("오류:"+e); }
-  }
-  async function loadFromGithub() {
-    const c = JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token) return alert("설정 필요");
-    try {
-        const res = await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`, {headers:{'Authorization':`token ${c.token}`, 'Accept':'application/vnd.github.v3+json'}});
-        if(!res.ok) throw new Error("파일 없음");
-        const d = JSON.parse(decodeURIComponent(escape(atob((await res.json()).content))));
-        if(d.codeDB) localStorage.setItem(DB_KEY_CODE, JSON.stringify(d.codeDB));
-        if(d.nameDB) localStorage.setItem(DB_KEY_NAME, JSON.stringify(d.nameDB));
-        showToast("✅ 다운로드 완료"); renderRuleList();
-    } catch(e) { alert("실패:"+e); }
-  }
+  function saveRule(key, val) { const k=currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k)); if(val.trim()){db[key]=val.trim();localStorage.setItem(k,JSON.stringify(db));}else deleteRule(key); }
+  function deleteRule(key) { if(!confirm("삭제?"))return; const k=currentTab==='code'?DB_KEY_CODE:DB_KEY_NAME; const db=JSON.parse(localStorage.getItem(k)); delete db[key]; localStorage.setItem(k,JSON.stringify(db)); renderRuleList(); }
+  function saveGithubConfig() { const t=document.getElementById('ghToken').value; const r=document.getElementById('ghRepo').value; const p=document.getElementById('ghPath').value; if(!t||!r)return alert("입력하세요"); localStorage.setItem('gh_config_fixer',JSON.stringify({token:t,repo:r,path:p})); showToast("설정 저장됨"); }
+  async function uploadToGithub() { const c=JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token)return alert("설정 필요"); const data={codeDB:JSON.parse(localStorage.getItem(DB_KEY_CODE)||'{}'),nameDB:JSON.parse(localStorage.getItem(DB_KEY_NAME)||'{}')}; const content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))); try{ const res=await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`,{headers:{'Authorization':`token ${c.token}`}}); let sha=res.ok?(await res.json()).sha:null; const put=await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`,{method:'PUT',headers:{'Authorization':`token ${c.token}`},body:JSON.stringify({message:'Backup',content:content,sha:sha})}); if(put.ok)showToast("✅ 업로드 완료"); else alert("실패"); }catch(e){alert("오류:"+e);} }
+  async function loadFromGithub() { const c=JSON.parse(localStorage.getItem('gh_config_fixer')||'{}'); if(!c.token)return alert("설정 필요"); try{ const res=await fetch(`https://api.github.com/repos/${c.repo}/contents/${c.path}`,{headers:{'Authorization':`token ${c.token}`,'Accept':'application/vnd.github.v3+json'}}); if(!res.ok)throw new Error("파일 없음"); const d=JSON.parse(decodeURIComponent(escape(atob((await res.json()).content)))); if(d.codeDB)localStorage.setItem(DB_KEY_CODE,JSON.stringify(d.codeDB)); if(d.nameDB)localStorage.setItem(DB_KEY_NAME,JSON.stringify(d.nameDB)); showToast("✅ 다운로드 완료"); renderRuleList(); }catch(e){alert("실패:"+e);} }
 </script>
 </body>
 </html>
