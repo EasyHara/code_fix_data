@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (스마트 파싱)</title>
+  <title>옵션 & 코드 마스터 (텍스트 선택 가능)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -194,7 +194,7 @@
   <div class="header">
     <div>
       <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
-      <p>입력 최적화 + 색상 자동분리 + 순번제어 + 클라우드</p>
+      <p>텍스트선택 가능 + 입력 최적화 + 색상분리 + 클라우드</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -315,11 +315,9 @@
 <div id="toast"></div>
 
 <script>
-  // 저장소 키
   const DB_KEY_CODE = "easyHara_db_by_code_v1"; 
   const DB_KEY_NAME = "easyHara_db_by_name_v1"; 
 
-  // 전역 변수
   let globalData = []; 
   let groupData = [];  
   let targetColKey = "", codeColKey = "";
@@ -451,11 +449,9 @@
       const stock = stockColKey ? String(row[stockColKey] || "").trim() : "";
       const name = String(row[targetColKey] || "").trim();
 
-      // [핵심] 사이즈에 '색상 / 사이즈'가 같이 있는 경우 분리
       if (!color && size.includes('/')) {
           const parts = size.split('/').map(s => s.trim());
           if (parts.length >= 2) {
-              // "블랙 / 95" -> 색상:블랙, 사이즈:95
               color = parts[0];
               size = parts.slice(1).join(' / ');
           }
@@ -468,7 +464,6 @@
       const targetGroup = groupData[idx];
       const rows = targetGroup.rows;
       
-      // 색상별로 행 분류 (parseRowInfo 사용)
       const colorMap = {};
       rows.forEach(rowIdx => {
           const info = parseRowInfo(rowIdx);
@@ -549,7 +544,13 @@
     visibleItems.forEach((item) => {
       const i = item.orgIdx;
       const tr = document.createElement('tr');
-      tr.setAttribute('draggable', true);
+      
+      // [수정] 순번 체크가 꺼져 있으면 드래그 기능 제거 (텍스트 선택 가능)
+      if (isSeqMode) {
+          tr.setAttribute('draggable', true);
+          addDragEvents(tr);
+      }
+      
       tr.dataset.index = i;
       if(item.linkToPrev) tr.classList.add('linked');
 
@@ -563,8 +564,15 @@
       const btnClass = item.excludeSave ? "btn-no-match active" : "btn-no-match";
       const btnText = item.excludeSave ? "🔕 매칭X" : "🔔 매칭O";
       
-      let seqText = isSeqMode ? formatStr.replace('00', String(item.seq).padStart(2, '0')) : "-";
-      let linkIcon = (i > 0 && item.linkToPrev && isSeqMode) ? `<span class="link-icon active">↳</span>` : ``;
+      let seqText = "";
+      let linkIcon = "";
+      
+      if (isSeqMode) {
+          seqText = formatStr.replace('00', String(item.seq).padStart(2, '0'));
+          linkIcon = (i > 0 && item.linkToPrev) ? `<span class="link-icon active">↳</span>` : ``;
+      } else {
+          seqText = "-"; 
+      }
 
       // 색상 분리 버튼
       let splitBtn = "";
@@ -572,9 +580,12 @@
          splitBtn = `<button class="btn-split" onclick="splitByColor(${i})">🎨 분리</button>`;
       }
 
+      // 드래그 핸들 (순번 모드 꺼지면 숨김)
+      const dragHandle = isSeqMode ? '⋮⋮' : '';
+
       tr.innerHTML = `
         <td class="col-chk"><input type="checkbox" class="row-chk" data-idx="${i}" ${item.isChecked ? 'checked' : ''}></td>
-        <td class="col-drag">⋮⋮</td>
+        <td class="col-drag" style="cursor:${isSeqMode?'grab':'default'}">${dragHandle}</td>
         <td class="col-seq">${linkIcon}${seqText}</td>
         <td class="col-status">${badge}</td>
         <td class="col-name">
@@ -595,9 +606,7 @@
         </td>
       `;
       
-      addDragEvents(tr);
       tr.querySelector('.row-chk').addEventListener('click', (e) => handleCheck(e, i));
-
       fragment.appendChild(tr);
     });
     tbody.appendChild(fragment);
@@ -786,14 +795,14 @@
     if(document.getElementById('ruleModal').style.display === 'flex') renderRuleList();
   }
 
-  // 옵션 보기 모달 (스마트 파싱 적용)
+  // 옵션 보기 모달
   function openOptModal(idx) {
     const item = groupData[idx];
     document.getElementById('optModalTitle').textContent = `[${item.displayName}] 옵션 목록 (${item.rows.length}개)`;
     const list = document.getElementById('optListArea');
     let html = `<table class="opt-table"><thead><tr><th>색상</th><th>사이즈</th><th>재고</th><th>원본명</th></tr></thead><tbody>`;
     item.rows.forEach(rowIdx => {
-        const info = parseRowInfo(rowIdx); // 스마트 파싱 사용
+        const info = parseRowInfo(rowIdx);
         html += `<tr>
             <td style="font-weight:bold; color:#475569;">${info.color||'-'}</td>
             <td>${info.size||'-'}</td>
