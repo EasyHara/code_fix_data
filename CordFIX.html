@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옵션 & 코드 마스터 (입력충돌 해결)</title>
+  <title>옵션 & 코드 마스터 (모델명 인식 패치)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
@@ -199,8 +199,8 @@
 <div class="container">
   <div class="header">
     <div>
-      <h1>🔢 옵션 & 코드 마스터 (Final)</h1>
-      <p>입력 버그 완벽 수정 + 드래그/입력 충돌 방지 + 클라우드</p>
+      <h1>🔢 옵션 & 코드 마스터 (Final + 모델명 패치)</h1>
+      <p>입력 버그 완벽 수정 + 드래그 충돌 방지 + 모델명 자동인식</p>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" onclick="openRuleManager()">⚙️ 규칙/동기화</button>
@@ -356,7 +356,7 @@
       let headerRowIndex = 0;
       for(let i=0; i<Math.min(rawData.length, 10); i++) {
           const rowStr = (rawData[i]||[]).join("").replace(/\s/g, "");
-          if(rowStr.includes("제품선택") || rowStr.includes("관리코드") || rowStr.includes("옵션")) {
+          if(rowStr.includes("제품선택") || rowStr.includes("관리코드") || rowStr.includes("옵션") || rowStr.includes("모델명")) {
               headerRowIndex = i; break;
           }
       }
@@ -366,7 +366,8 @@
 
       // 컬럼 인식
       const keys = Object.keys(globalData[0]);
-      targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션/.test(k.replace(/\s/g,'')));
+      // [수정된 부분] : 모델명 추가
+      targetColKey = keys.find(k => /제품선택|추가상품값|제품|옵션|모델명/.test(k.replace(/\s/g,'')));
       codeColKey = keys.find(k => /관리코드|상품코드|코드/.test(k.replace(/\s/g,'')));
       colorColKey = keys.find(k => /색상|color|opt1/i.test(k.replace(/\s/g,'')));
       sizeColKey = keys.find(k => /사이즈|size|opt2/i.test(k.replace(/\s/g,'')));
@@ -446,7 +447,7 @@
 
       groupData.push({
         cleanName: val.cleanName, 
-        rawName: val.rawName,     
+        rawName: val.rawName,      
         displayName: val.rawName, 
         originalCode: val.originalCode,
         originalSeq: val.originalSeq, 
